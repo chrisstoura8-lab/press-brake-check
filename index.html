@@ -824,7 +824,15 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
 (function () {
   'use strict';
   var Q = window.LQ, P = window.PB, RAD = P.RAD, LANGS = ['it', 'en', 'el'], LOC = { it: 'it-IT', en: 'en-GB', el: 'el-GR' };
-  var MATS = [{ name: 'S235JR', Rm: 420, rv: 0.16 }, { name: 'AISI 304', Rm: 620, rv: 0.21 }, { name: 'AlMg3 (5754)', Rm: 220, rv: 0.14 }];
+  var DEF_MATS = [
+    { id: 'mat-s235', name: 'S235JR', kind: 'material', Rm: 420, rv: 0.16, K: 0.4, rmin: 0, sample: true },
+    { id: 'mat-dc01', name: 'DC01', kind: 'material', Rm: 320, rv: 0.15, K: 0.4, rmin: 0, sample: true },
+    { id: 'mat-s355', name: 'S355', kind: 'material', Rm: 520, rv: 0.17, K: 0.4, rmin: 0, sample: true },
+    { id: 'mat-304', name: 'AISI 304', kind: 'material', Rm: 620, rv: 0.21, K: 0.4, rmin: 0, sample: true },
+    { id: 'mat-5754', name: 'AlMg3 (5754)', kind: 'material', Rm: 220, rv: 0.14, K: 0.4, rmin: 0, sample: true }
+  ];
+  function mats() { return lib.filter(function (x) { return x.kind === 'material'; }); }
+  function mat() { return byId(part.mat) || mats()[0] || DEF_MATS[0]; }
   var T = {
     title: ['Verifica utensili di piegatura', 'Press brake tooling check', 'Έλεγχος εργαλείων στράντζας'],
     sub: ['Scegli punzone e matrice dalla tua libreria e guarda, piega per piega, se il pezzo si può fare.', 'Pick a punch and die from your library and see, bend by bend, whether the part can be made.', 'Διάλεξε μαχαίρι και τάκο από τη βιβλιοθήκη σου και δες, στράντζα προς στράντζα, αν το κομμάτι βγαίνει.'],
@@ -897,6 +905,10 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     sugRun: ['Controllo {a} di {b}…', 'Checking {a} of {b}…', 'Έλεγχος {a} από {b}…'], sugPre: ['{n} combinazioni nella libreria, {m} superano i controlli di base, {k} provate in sequenza.', '{n} combinations in the library, {m} pass the basic checks, {k} tried in sequence.', '{n} συνδυασμοί στη βιβλιοθήκη, {m} περνούν τους βασικούς ελέγχους, {k} δοκιμάστηκαν σε σειρά πατημάτων.'],
     sugNone: ['Nessuna combinazione della libreria fa questo pezzo. Le più vicine:', 'No combination in the library makes this part. The closest ones:', 'Κανένας συνδυασμός της βιβλιοθήκης δεν βγάζει το κομμάτι. Οι πιο κοντινοί:'],
     use: ['Usa', 'Use', 'Χρήση'], best: ['proposta', 'suggested', 'προτεινόμενο'], hitsN: ['{n} pieghe in più colpi', '{n} bends in several hits', '{n} στράντζες σε πολλά πατήματα'],
+    materials: ['Materiali', 'Materials', 'Υλικά'], addMat: ['Aggiungi materiale', 'Add material', 'Προσθήκη υλικού'], newMat: ['Nuovo materiale', 'New material', 'Νέο υλικό'],
+    fRm: ['Resistenza a trazione Rm N/mm²', 'Tensile strength Rm N/mm²', 'Αντοχή σε εφελκυσμό Rm N/mm²'], fRv: ['Raggio interno ÷ V', 'Inside radius ÷ V', 'Εσωτερική ακτίνα ÷ V'], fK: ['Fattore K', 'K-factor', 'Συντελεστής K'], fRmin: ['Raggio minimo ÷ spessore', 'Minimum radius ÷ thickness', 'Ελάχιστη ακτίνα ÷ πάχος'],
+    matNote: ['Rm entra nel calcolo della forza. Il raggio interno in aria è Raggio÷V × apertura V. Il fattore K serve per lo sviluppo. Raggio minimo: 0 = non controllato.', 'Rm drives the force. The air-bending inside radius is Radius÷V × V opening. The K-factor is used for the flat length. Minimum radius: 0 = not checked.', 'Το Rm μπαίνει στον υπολογισμό της δύναμης. Η εσωτερική ακτίνα στην ελεύθερη κάμψη είναι Ακτίνα÷V × άνοιγμα V. Ο συντελεστής K χρησιμεύει για το ανάπτυγμα. Ελάχιστη ακτίνα: 0 = δεν ελέγχεται.'],
+    rMin: ['Raggio interno {v} mm sotto il minimo del materiale ({r} mm): rischio di cricche. Serve una V più grande.', 'Inside radius {v} mm is below the material minimum ({r} mm): risk of cracking. A larger V is needed.', 'Εσωτερική ακτίνα {v} mm κάτω από το ελάχιστο του υλικού ({r} mm): κίνδυνος ρωγμής. Θέλει μεγαλύτερο V.'],
     noTool: ['Aggiungi almeno un punzone e una matrice nella libreria.', 'Add at least one punch and one die to the library.', 'Πρόσθεσε τουλάχιστον ένα μαχαίρι και έναν τάκο στη βιβλιοθήκη.'],
     layers: ['Layer del DXF', 'DXF layers', 'Layers του DXF'], rCut: ['taglio', 'cut', 'κοπή'], rBend: ['piega', 'bend', 'στράντζα'], rIgn: ['ignora', 'ignore', 'αγνόησε'],
     punches: ['Punzoni', 'Punches', 'Μαχαίρια'], dies: ['Matrici', 'Dies', 'Τάκοι'], addP: ['Aggiungi punzone da DXF', 'Add punch from DXF', 'Προσθήκη μαχαιριού από DXF'], addD: ['Aggiungi matrice da DXF', 'Add die from DXF', 'Προσθήκη τάκου από DXF'],
@@ -913,7 +925,7 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     h3: ['Fino a 7 pieghe vengono provate tutte le sequenze. Ala minima = (V/2) ÷ cos(angolo di piega/2). Carico = 1,42 · Rm · s² ÷ V in kN/m. Raggio interno = frazione di V secondo il materiale, mai sotto il raggio del punzone.', 'Up to 7 bends, every sequence is tried. Minimum flange = (V/2) ÷ cos(bend angle/2). Load = 1.42 · Rm · t² ÷ V in kN/m. Inside radius = a fraction of V by material, never below the punch radius.', 'Μέχρι 7 στράντζες δοκιμάζονται όλες οι σειρές. Ελάχιστο φτερό = (V/2) ÷ cos(γωνία κάμψης/2). Φορτίο = 1,42 · Rm · t² ÷ V σε kN/m. Εσωτερική ακτίνα = κλάσμα του V ανά υλικό, ποτέ κάτω από την ακτίνα του μαχαιριού.'],
     h4: ['Non sono controllati: il profilo che cambia lungo la piega (si usa la sezione più larga) e le posizioni intermedie tra 0, 34, 67 e 100 % della piega.', 'Not checked: a profile that changes along the bend (the widest section is used) and the positions between 0, 34, 67 and 100 % of the bend.', 'Δεν ελέγχονται: προφίλ που αλλάζει κατά μήκος της στράντζας (χρησιμοποιείται η πιο πλατιά τομή) και οι ενδιάμεσες θέσεις ανάμεσα σε 0, 34, 67 και 100 % της στράντζας.']
   };
-  var lang, lib, view = 'check', part, selP, selD, selM = '', sugg = null, sugTok = 0, fit = false, userStep = false, cfg = { boxCl: 1, boxTol: 5, maxHits: 3, gShort: 1, unitK: 0 }, si = 0, prog = 1, msgs = [], open = {}, ev = null, K = 0.4;
+  var lang, lib, view = 'check', part, selP, selD, selM = '', sugg = null, sugTok = 0, fit = false, userStep = false, cfg = { boxCl: 1, boxTol: 5, maxHits: 3, gShort: 1, unitK: 0 }, si = 0, prog = 1, msgs = [], open = {}, ev = null;
   function t(k, o) { var r = T[k]; r = r ? r[LANGS.indexOf(lang)] : k; if (o) Object.keys(o).forEach(function (x) { r = r.split('{' + x + '}').join(o[x]); }); return r; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
@@ -942,17 +954,18 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
   function lab(g, i) { return (ev && ev.groups.length > 1 || (part.mode === 'dxf' && part.groups.length > 1) ? 'ABCDEF'.charAt(g) : '') + (i + 1); }
   function byId(id) { for (var i = 0; i < lib.length; i++) if (lib[i].id === id) return lib[i]; return null; }
   function saveLib() { save('pb.lib', lib); save('pb.libv', LIBV); }
-  function samplePart() { part = { mode: 'manual', name: t('sample'), t: 1.5, mat: 0, out: [15, 25, 80], bends: [{ gamma: 90, dir: 1 }, { gamma: 90, dir: 1 }], blen: 500 }; si = 0; prog = 1; }
+  function samplePart() { part = { mode: 'manual', name: t('sample'), t: 1.5, mat: (mats()[0] || DEF_MATS[0]).id, out: [15, 25, 80], bends: [{ gamma: 90, dir: 1 }, { gamma: 90, dir: 1 }], blen: 500 }; si = 0; prog = 1; }
 
   function compute(pu, di, mc, manual, cheap) {
     if (!pu || !di || !(di.V > 0)) return null;
-    var r = Math.max(MATS[part.mat].rv * di.V, pu.radius || 0), list, issues = [], notes = [], fmax = 0, loadPerM = 0;
+    var M = mat(), K = M.K > 0 ? M.K : 0.4, r = Math.max((M.rv > 0 ? M.rv : 0.16) * di.V, pu.radius || 0), list, issues = [], notes = [], fmax = 0, loadPerM = 0;
+    if (M.rmin > 0 && r < M.rmin * part.t - 1e-9) issues.push({ g: 0, id: 'rMin', v: r, r: M.rmin * part.t });
     var env = mc ? { ramW: mc.ramW || 0, hW: mc.hW || 0, hH: mc.hH || 0, tableW: mc.tableW || 0, gMin: mc.gMin || 0, gMax: mc.gMax || 0 } : {}; env.gShort = !!cfg.gShort;
     if (part.mode === 'manual') { var mb = part.bends.map(function (b) { return { gamma: b.gamma, dir: b.dir, len: part.blen }; }); list = [{ bends: mb, legs: P.flatLegs(part.out, mb, part.t, r, K) }]; }
     else list = part.groups;
     if (!list.length || !list[0].bends.length) return null;
     var groups = list.map(function (g, gi) {
-      var S = { legs: g.legs, target: g.bends.map(function (b) { return b.dir * (180 - b.gamma) * RAD; }), sgn: g.bends.map(function (b) { return b.dir; }), t: part.t, r: r, K: K, punch: pu, die: di, Rm: MATS[part.mat].Rm, bendsInfo: g.bends, env: env };
+      var S = { legs: g.legs, target: g.bends.map(function (b) { return b.dir * (180 - b.gamma) * RAD; }), sgn: g.bends.map(function (b) { return b.dir; }), t: part.t, r: r, K: K, punch: pu, die: di, Rm: M.Rm > 0 ? M.Rm : 420, bendsInfo: g.bends, env: env };
       var ord = manual && part.orders && part.orders[gi]; if (ord && ord.length !== g.bends.length) { ord = null; part.orders[gi] = null; }
       var rl = P.rules(S), sq = cheap ? { steps: [], ok: true } : P.sequence(S, true, ord, ord && part.sides ? part.sides[gi] : null); loadPerM = rl.loadPerM;
       rl.issues.forEach(function (x) { x.g = gi; if (x.bend == null && gi > 0) return; issues.push(x); });
@@ -989,7 +1002,7 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
       var cnt = function (l) { return l.filter(function (x) { return !x.note; }).length * 100 + l.length; }, a = box(0, 1), b2 = box(1, 0), pick = cnt(a) <= cnt(b2) ? a : b2;
       order = pick === a ? [0, 1] : [1, 0]; notes = pick.filter(function (x) { return x.note; }); issues = issues.concat(pick.filter(function (x) { return !x.note; }));
     }
-    return { groups: groups, issues: issues, notes: notes, ok: !issues.length, fmax: fmax, loadPerM: loadPerM, order: order, r: r, pu: pu, di: di };
+    return { groups: groups, issues: issues, notes: notes, ok: !issues.length, fmax: fmax, loadPerM: loadPerM, order: order, r: r, K: K, pu: pu, di: di };
   }
   function evaluate() {
     ev = compute(byId(selP), activeDie(), byId(selM), true, false); if (!ev) return;
@@ -1109,6 +1122,9 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
   function libView() {
     return '<p class="mute" style="max-width:70ch;font-size:13px">' + t('libNote') + '</p>' + unitSel('u-lib') +
       '<section><h2>' + t('machines') + '</h2>' + tools('machine').map(machineCard).join('') + '<div><button class="btn pri" type="button" data-act="addM">' + t('addM') + '</button></div></section>' +
+      '<section><h2>' + t('materials') + '</h2><p class="mute" style="max-width:70ch;font-size:12px">' + t('matNote') + '</p>' + mats().map(function (m) {
+        return '<article class="tool">' + tf(m, 'name', t('name'), true) + '<div class="inputs">' + tf(m, 'Rm', t('fRm')) + tf(m, 'rv', t('fRv')) + tf(m, 'K', t('fK')) + tf(m, 'rmin', t('fRmin')) + '</div><div class="actions" style="align-items:center"><span class="mute" style="flex:1">' + (m.sample ? '<span class="tag">' + t('demoTag') + '</span>' : '') + '</span>' + (mats().length > 1 ? '<button class="btn sm" type="button" data-del="' + esc(m.id) + '">' + t('del') + '</button>' : '') + '</div></article>';
+      }).join('') + '<div><button class="btn pri" type="button" data-act="addMat">' + t('addMat') + '</button></div></section>' +
       '<section><h2>' + t('punches') + '</h2>' + tools('punch').map(toolCard).join('') + '<div><input class="hid" type="file" id="fPunch" accept=".dxf,.DXF" multiple><label class="btn pri" for="fPunch">' + t('addP') + '</label></div></section>' +
       '<section><h2>' + t('dies') + '</h2>' + tools('die').map(toolCard).join('') + '<div><input class="hid" type="file" id="fDie" accept=".dxf,.DXF" multiple><label class="btn pri" for="fDie">' + t('addD') + '</label></div></section>' +
       '<div class="actions"><button class="btn" type="button" data-act="exp">' + t('exp') + '</button><input class="hid" type="file" id="fLib" accept=".json,application/json"><label class="btn" for="fLib">' + t('imp') + '</label><button class="btn" type="button" data-act="demo">' + t(EMB ? 'restore' : 'demo') + '</button></div>';
@@ -1131,7 +1147,7 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     h += msgs.map(function (m) { return '<p class="msg">' + esc(m) + '</p>'; }).join('');
     var msel = ms.length ? '<label for="i-m">' + t('machine') + '<select id="i-m" data-s="machine">' + opt('', t('anyM'), selM) + ms.map(function (x) { return opt(x.id, x.name, selM); }).join('') + '</select></label>' : '';
     if (!pu.length || !di.length) return h + (selM ? '<div class="inputs">' + msel + '</div>' : '') + '<p class="msg">' + t(selM ? 'noFit' : 'noTool') + '</p>';
-    h += '<div class="inputs">' + msel + '<label for="i-t">' + t('thk') + '<input id="i-t" type="number" inputmode="decimal" min="0" step="any" data-f="t" value="' + part.t + '"></label><label for="i-mat">' + t('mat') + '<select id="i-mat" data-s="mat">' + MATS.map(function (m, i) { return opt(i, m.name, part.mat); }).join('') + '</select></label>' +
+    h += '<div class="inputs">' + msel + '<label for="i-t">' + t('thk') + '<input id="i-t" type="number" inputmode="decimal" min="0" step="any" data-f="t" value="' + part.t + '"></label><label for="i-mat">' + t('mat') + '<select id="i-mat" data-s="mat">' + mats().map(function (m) { return opt(m.id, m.name, mat().id); }).join('') + '</select></label>' +
       '<label for="i-p">' + t('punch') + '<select id="i-p" data-s="punch">' + pu.map(function (x) { return opt(x.id, x.name, selP); }).join('') + '</select></label><label for="i-d">' + t('die') + '<select id="i-d" data-s="die">' + di.map(function (x) { return opt(x.val, x.label, selD); }).join('') + '</select></label>' +
       (part.mode === 'manual' ? '<label for="i-bl">' + t('blen') + '<input id="i-bl" type="number" inputmode="decimal" min="0" step="any" data-f="blen" value="' + part.blen + '"></label>' : '') +
       (part.mode === 'dxf' && part.groups.length > 1 ? '<label for="i-g">' + t('dirG') + '<select id="i-g" data-s="group">' + part.groups.map(function (g, i) { return opt(i, 'ABCDEF'.charAt(i) + ' · ' + nf(g.angDeg, 0) + '° · ' + g.bends.length, part.gi); }).join('') + '</select></label>' : '') + '</div>';
@@ -1163,7 +1179,7 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
       (sq.steps.length > 1 ? '<div class="actions"><button class="btn sm" type="button" data-act="' + (sq.manual ? 'seqAuto' : 'seqSet') + '">' + t(sq.manual ? 'autoSeq' : 'setSeq') + '</button></div>' : '') +
       '<p class="mute" style="font-size:12px">' + (sq.manual ? t('seqMan') : sq.ok && sq.searched ? t('seqAuto') : !sq.ok && sq.searched ? t('seqNone') : !sq.searched ? t('seqList') : '') + (sq.steps.some(function (s) { return s.mirror; }) ? ' · ↔ = ' + t('turned') : '') + (st && st.G > 0 ? ' · ' + t('gaugeAt', { g: nf(st.G, 1) }) : '') + '</p>' + (why ? '<p class="msg">' + esc(issueText(why)) + (st.other ? ' ' + t('gSide') : '') + '</p>' : '') + (!sq.ok ? '<p class="mute" style="font-size:13px;max-width:70ch">' + t('dirHint') + '</p>' : '') + '</section>';
     h += '<div class="draw" id="sim"></div><div class="actions"><button class="btn sm" type="button" data-act="zoom">' + t(fit ? 'zoomT' : 'zoomP') + '</button></div><label for="i-prog">' + t('prog') + '<input id="i-prog" type="range" min="0" max="100" step="1" value="' + Math.round(prog * 100) + '" data-prog="1"></label>';
-    h += '<p class="mute num" style="font-size:13px">' + t('info', { u: UN(), r: nf(ev.r, 1), f: nf(fromKN(ev.loadPerM), cfg.unitK ? 0 : 1), bd: nf(P.bendDeduction(Math.PI / 2, part.t, ev.r, K), 2) }) + ' · ' + t('force', { u: UN(), f: nf(fromT(ev.fmax), cfg.unitK ? 0 : 1) }) + '</p>';
+    h += '<p class="mute num" style="font-size:13px">' + t('info', { u: UN(), r: nf(ev.r, 1), f: nf(fromKN(ev.loadPerM), cfg.unitK ? 0 : 1), bd: nf(P.bendDeduction(Math.PI / 2, part.t, ev.r, ev.K), 2) }) + ' · ' + t('force', { u: UN(), f: nf(fromT(ev.fmax), cfg.unitK ? 0 : 1) }) + '</p>';
     if (n) h += '<section><h2>' + t('found') + '</h2><ol class="issues">' + ev.issues.map(function (x, i) { return '<li><span class="no">' + (i + 1) + '</span><span>' + esc(issueText(x)) + '</span></li>'; }).join('') + '</ol></section>';
     if (ev.notes.length) h += '<section><h2>' + t('notes') + '</h2><ol class="issues notes">' + ev.notes.map(function (x) { return '<li><span>' + esc(issueText(x)) + '</span></li>'; }).join('') + '</ol></section>';
     h += '<details id="dBox"' + (open.dBox ? ' open' : '') + '><summary>' + t('boxT') + '</summary><div class="din"><label class="chk" for="c-gShort"><input type="checkbox" id="c-gShort" data-cfgb="gShort"' + (cfg.gShort ? ' checked' : '') + '>' + t('cGShort') + '</label>' + unitSel('u-chk') + '<div class="inputs">' + [['boxCl', 'cCl'], ['boxTol', 'cTol'], ['maxHits', 'cHits']].map(function (c) { return '<label for="c-' + c[0] + '">' + t(c[1]) + '<input id="c-' + c[0] + '" type="number" inputmode="decimal" min="0" step="any" data-cfg="' + c[0] + '" value="' + cfg[c[0]] + '"></label>'; }).join('') + '</div></div></details>';
@@ -1217,14 +1233,14 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
         part = { mode: 'dxf', name: name, t: th > 0 && th <= 30 ? th : part.t, mat: part.mat, pieces: x.pieces, roles: roles, groups: P.partFromFlat(x.pieces, roles), gi: 0 }; si = 0; prog = 1;
       } catch (err) { msgs.push(name + ': ' + t('errRead')); } }, render); return; }
     if (el.id === 'fPunch' || el.id === 'fDie') { msgs = []; var kind = el.id === 'fPunch' ? 'punch' : 'die'; readAll(el.files, function (n, x) { addTool(kind, n, x); }, function () { saveLib(); render(); }); return; }
-    if (el.id === 'fLib') { msgs = []; readAll(el.files, function (n, x) { try { var a = JSON.parse(x); a = Array.isArray(a) ? a : a.tools; var okc = 0; a.forEach(function (tl) { if (tl && (tl.kind === 'machine' || ((tl.kind === 'punch' || tl.kind === 'die') && Array.isArray(tl.pts) && tl.pts.length > 2))) { tl.id = tl.id && !byId(tl.id) ? String(tl.id) : tl.kind[0] + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); tl.name = String(tl.name || tl.id); lib.push(tl); okc++; } }); if (!okc) throw 0; } catch (err) { msgs.push(n + ': ' + t('errLib')); } }, function () { fixSel(); saveLib(); render(); }); return; }
+    if (el.id === 'fLib') { msgs = []; readAll(el.files, function (n, x) { try { var a = JSON.parse(x); a = Array.isArray(a) ? a : a.tools; var okc = 0; a.forEach(function (tl) { if (tl && (tl.kind === 'machine' || tl.kind === 'material' || ((tl.kind === 'punch' || tl.kind === 'die') && Array.isArray(tl.pts) && tl.pts.length > 2))) { tl.id = tl.id && !byId(tl.id) ? String(tl.id) : tl.kind[0] + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); tl.name = String(tl.name || tl.id); lib.push(tl); okc++; } }); if (!okc) throw 0; } catch (err) { msgs.push(n + ': ' + t('errLib')); } }, function () { fixSel(); saveLib(); render(); }); return; }
     if (d.unit) { cfg.unitK = +el.value ? 1 : 0; save('pb.cfg', cfg); render(); return; }
     if (d.cfgb) { cfg[d.cfgb] = el.checked ? 1 : 0; save('pb.cfg', cfg); update(); return; }
     if (d.cfg) { update(); return; }
     if (d.fit) { var ft = byId(d.fit); if (ft) { ft.fits = (ft.fits || []).filter(function (x) { return x !== d.m; }); if (el.checked) ft.fits.push(d.m); saveLib(); render(); } return; }
     if (d.vu) { var du = byId(d.vu); if (du) { du.vuse = du.vuse || {}; du.vuse[d.k] = el.checked; fixSel(); saveLib(); } return; }
     if (d.s === 'machine') { selM = el.value; fixSel(); si = 0; render(); return; }
-    if (d.s === 'mat') { part.mat = +el.value; update(); }
+    if (d.s === 'mat') { part.mat = el.value; update(); }
     else if (d.s === 'punch') { selP = el.value; si = 0; update(); }
     else if (d.s === 'die') { selD = el.value; si = 0; update(); }
     else if (d.gs) { part.sides = part.sides || {}; part.sides[part.gi] = part.sides[part.gi] || {}; part.sides[part.gi][d.gs] = el.value; for (var q = 0; q < ev.groups[part.gi].seq.steps.length; q++) if (String(ev.groups[part.gi].seq.steps[q].k) === d.gs) si = q; userStep = true; prog = 1; update(); return; }
@@ -1251,14 +1267,17 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     else if (d.flip && (tl = byId(d.flip))) { tl.pts = tl.pts.map(function (p) { return [p[0], -p[1]]; }); renorm(tl); saveLib(); render(); }
     else if (d.mir && (tl = byId(d.mir))) { tl.pts = tl.pts.map(function (p) { return [-p[0], p[1]]; }); renorm(tl); saveLib(); render(); }
     else if (d.del) { lib = lib.filter(function (x) { return x.id !== d.del; }); lib.forEach(function (x) { if (x.fits) x.fits = x.fits.filter(function (m) { return m !== d.del; }); }); fixSel(); saveLib(); render(); }
+    else if (d.act === 'addMat') { lib.push({ id: 'mat-' + Date.now().toString(36), name: t('newMat'), kind: 'material', Rm: 420, rv: 0.16, K: 0.4, rmin: 0 }); saveLib(); render(); }
     else if (d.act === 'addM') { lib.push({ id: 'm-' + Date.now().toString(36), name: t('newM'), kind: 'machine', tons: 100, length: 3000, open: 0, clamp: '' }); saveLib(); render(); }
     else if (d.act === 'exp') saveFile('tool-library.json', JSON.stringify({ tools: lib }, null, 1), 'application/json');
-    else if (d.act === 'demo') { if (EMB) lib = builtIn(); else P.demoLib().forEach(function (x) { if (!byId(x.id)) lib.push(x); }); fixSel(); saveLib(); render(); }
+    else if (d.act === 'demo') { if (EMB) lib = builtIn(); else P.demoLib().forEach(function (x) { if (!byId(x.id)) lib.push(x); }); ensureMats(); fixSel(); saveLib(); render(); }
   });
 
   var EMB = window.PB_LIBRARY && Array.isArray(window.PB_LIBRARY.tools) && window.PB_LIBRARY.tools.length ? window.PB_LIBRARY : null, LIBV = EMB ? String(EMB.v) : 'demo';
   function builtIn() { return EMB ? JSON.parse(JSON.stringify(EMB.tools)) : P.demoLib(); }
+  function ensureMats() { if (!lib.some(function (x) { return x.kind === 'material'; })) lib = lib.concat(JSON.parse(JSON.stringify(DEF_MATS))); }
   var st = load('pb.lib'), sv = load('pb.libv'); lib = Array.isArray(st) && st.length && (sv == null || sv === LIBV) && !(EMB && sv == null) ? st : builtIn();
+  ensureMats();
   var sc = load('pb.cfg'); if (sc) Object.keys(cfg).forEach(function (k) { if (typeof sc[k] === 'number') cfg[k] = sc[k]; });
   var nl = (navigator.language || 'en').slice(0, 2); lang = load('pb.lang'); if (LANGS.indexOf(lang) < 0) lang = LANGS.indexOf(nl) >= 0 ? nl : 'en';
   selP = 'p-straight'; selD = 'd-v12'; selM = byId('m-100') ? 'm-100' : (tools('machine')[0] || {}).id || ''; fixSel(); samplePart(); render();
