@@ -840,11 +840,11 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     seq: ['Sequenza', 'Sequence', 'Σειρά'], bendN: ['piega {n}', 'bend {n}', 'στράντζα {n}'], turned: ['girato', 'turned', 'γυρισμένο'],
     seqAuto: ['Sequenza trovata automaticamente', 'Sequence found automatically', 'Η σειρά βρέθηκε αυτόματα'], seqNone: ['Nessuna sequenza evita le collisioni', 'No sequence avoids the collisions', 'Καμία σειρά δεν αποφεύγει τις συγκρούσεις'], seqList: ['Sequenza nell\'ordine elencato (troppe pieghe per la ricerca)', 'Sequence in listed order (too many bends to search)', 'Σειρά όπως στη λίστα (πολλές στράντζες για αναζήτηση)'],
     stepT: ['Passo', 'Step', 'Βήμα'], prog: ['Avanzamento piega', 'Bend progress', 'Πρόοδος στράντζας'],
-    info: ['Raggio interno {r} mm · carico {f} kN/m · detrazione a 90° {bd} mm', 'Inside radius {r} mm · load {f} kN/m · 90° bend deduction {bd} mm', 'Εσωτερική ακτίνα {r} mm · φορτίο {f} kN/m · bend deduction 90° {bd} mm'],
+    info: ['Raggio interno {r} mm · carico {f} {u}/m · detrazione a 90° {bd} mm', 'Inside radius {r} mm · load {f} {u}/m · 90° bend deduction {bd} mm', 'Εσωτερική ακτίνα {r} mm · φορτίο {f} {u}/m · bend deduction 90° {bd} mm'],
     found: ['Problemi', 'Findings', 'Ευρήματα'],
     tMin: ['Spessore {v} mm sotto il minimo della matrice ({r} mm)', 'Thickness {v} mm is below the die minimum ({r} mm)', 'Πάχος {v} mm κάτω από το ελάχιστο του τάκου ({r} mm)'],
     tMax: ['Spessore {v} mm oltre il massimo della matrice ({r} mm)', 'Thickness {v} mm is above the die maximum ({r} mm)', 'Πάχος {v} mm πάνω από το μέγιστο του τάκου ({r} mm)'],
-    load: ['Carico {v} kN/m oltre il limite degli utensili ({r} kN/m)', 'Load {v} kN/m exceeds the tooling limit ({r} kN/m)', 'Φορτίο {v} kN/m πάνω από το όριο των εργαλείων ({r} kN/m)'],
+    load: ['Carico {v} {u}/m oltre il limite degli utensili ({r} {u}/m)', 'Load {v} {u}/m exceeds the tooling limit ({r} {u}/m)', 'Φορτίο {v} {u}/m πάνω από το όριο των εργαλείων ({r} {u}/m)'],
     pAngle: ['Piega {b}: il punzone da {v}° non arriva a {r}°', 'Bend {b}: the {v}° punch cannot reach {r}°', 'Στράντζα {b}: το μαχαίρι {v}° δεν φτάνει τις {r}°'],
     dAngle: ['Piega {b}: la matrice da {v}° non arriva a {r}°', 'Bend {b}: the {v}° die cannot reach {r}°', 'Στράντζα {b}: ο τάκος {v}° δεν φτάνει τις {r}°'],
     flange: ['Piega {b}: ala di {v} mm troppo corta per V{V}, minimo {r} mm', 'Bend {b}: {v} mm flange is too short for V{V}, minimum {r} mm', 'Στράντζα {b}: φτερό {v} mm πολύ κοντό για V{V}, ελάχιστο {r} mm'],
@@ -854,13 +854,13 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     noBend: ['Nessuna linea di piega trovata nel DXF. Controlla i layer.', 'No bend lines found in the DXF. Check the layers.', 'Δεν βρέθηκαν γραμμές στράντζας στο DXF. Έλεγξε τα layers.'],
     noV: ['Imposta l\'apertura V di questa matrice nella libreria.', 'Set the V opening of this die in the library.', 'Όρισε το άνοιγμα V αυτού του τάκου στη βιβλιοθήκη.'],
     machine: ['Macchina', 'Machine', 'Μηχανή'], anyM: ['— qualsiasi —', '— any —', '— οποιαδήποτε —'], machines: ['Macchine', 'Machines', 'Μηχανές'], addM: ['Aggiungi macchina', 'Add machine', 'Προσθήκη μηχανής'],
-    fTons: ['Forza t', 'Tonnage t', 'Tonnage t'], fMLen: ['Lunghezza di piega mm', 'Bending length mm', 'Μήκος κάμψης mm'], fOpen: ['Luce max mm', 'Open height mm', 'Μέγιστο άνοιγμα mm'], fClamp: ['Attacco utensili', 'Tool clamping', 'Σύστημα πρόσδεσης'],
+    fTons: ['Forza {u}', 'Force {u}', 'Δύναμη {u}'], cUnit: ['Unità di forza', 'Force unit', 'Μονάδα δύναμης'], uT: ['tonnellate (t)', 'tonnes (t)', 'τόνοι (t)'], uK: ['kilonewton (kN)', 'kilonewtons (kN)', 'kilonewton (kN)'], fMLen: ['Lunghezza di piega mm', 'Bending length mm', 'Μήκος κάμψης mm'], fOpen: ['Luce max mm', 'Open height mm', 'Μέγιστο άνοιγμα mm'], fClamp: ['Attacco utensili', 'Tool clamping', 'Σύστημα πρόσδεσης'],
     fits: ['Monta su', 'Fits on', 'Κουμπώνει σε'], nTools: ['{p} punzoni · {d} matrici', '{p} punches · {d} dies', '{p} μαχαίρια · {d} τάκοι'],
     noFit: ['Nessun punzone o matrice è assegnato a questa macchina. Assegnali nella libreria.', 'No punch or die is assigned to this machine. Assign them in the library.', 'Κανένα μαχαίρι ή τάκος δεν έχει οριστεί για αυτή τη μηχανή. Όρισέ τα στη βιβλιοθήκη.'],
-    mForce: ['Piega {b}: servono {v} t, la macchina ne ha {r}', 'Bend {b}: needs {v} t, the machine has {r}', 'Στράντζα {b}: θέλει {v} t, η μηχανή έχει {r}'],
+    mForce: ['Piega {b}: servono {v} {u}, la macchina ne ha {r}', 'Bend {b}: needs {v} {u}, the machine has {r}', 'Στράντζα {b}: θέλει {v} {u}, η μηχανή έχει {r}'],
     mLen: ['Piega {b}: lunga {v} mm, la macchina piega {r} mm', 'Bend {b}: {v} mm long, the machine bends {r} mm', 'Στράντζα {b}: μήκος {v} mm, η μηχανή στραντζάρει {r} mm'],
     mOpen: ['Punzone + matrice alti {v} mm, luce della macchina {r} mm', 'Punch + die are {v} mm tall, machine opening {r} mm', 'Μαχαίρι + τάκος έχουν ύψος {v} mm, άνοιγμα μηχανής {r} mm'],
-    force: ['forza max {f} t', 'max force {f} t', 'μέγ. δύναμη {f} t'], newM: ['Nuova macchina', 'New machine', 'Νέα μηχανή'],
+    force: ['forza max {f} {u}', 'max force {f} {u}', 'μέγ. δύναμη {f} {u}'], newM: ['Nuova macchina', 'New machine', 'Νέα μηχανή'],
     fRamW: ['Traversa: spessore mm', 'Ram: thickness mm', 'Τραβέρσα: πάχος mm'], fHW: ['Portapunzone: larghezza mm', 'Punch holder: width mm', 'Βάση μαχαιριού: πλάτος mm'], fHH: ['Portapunzone: altezza mm', 'Punch holder: height mm', 'Βάση μαχαιριού: ύψος mm'],
     fTabW: ['Banco: larghezza mm', 'Table: width mm', 'Τραπέζι: πλάτος mm'], fGMin: ['Riscontro: distanza min mm', 'Back gauge: min distance mm', 'Πίσω οδηγός: ελάχ. απόσταση mm'], fGMax: ['Riscontro: distanza max mm', 'Back gauge: max distance mm', 'Πίσω οδηγός: μέγ. απόσταση mm'],
     zero: ['0 = non controllato', '0 = not checked', '0 = δεν ελέγχεται'], fSegs: ['Segmenti mm (es. 100x2, 50, 40, 20, 15, 10)', 'Segments mm (e.g. 100x2, 50, 40, 20, 15, 10)', 'Κομμάτια mm (π.χ. 100x2, 50, 40, 20, 15, 10)'],
@@ -893,11 +893,15 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     gAuto: ['riscontro: automatico', 'gauge: automatic', 'οδηγός: αυτόματα'], gOn: ['riscontro sul lato del tratto {n} ({l} mm)', 'gauge on the side of leg {n} ({l} mm)', 'οδηγός στην πλευρά του φτερού {n} ({l} mm)'], gSel: ['Lato del riscontro', 'Gauge side', 'Πλευρά οδηγού'],
     earlier: ['prima', 'earlier', 'νωρίτερα'], later: ['dopo', 'later', 'αργότερα'],
     dirHint: ['Se in officina questo pezzo si fa, controlla il verso (su/giù) di ogni piega nella tabella: da un DXF senza layer di verso tutte le pieghe sono considerate «su». Puoi anche impostare tu la sequenza.', 'If this part is made in your shop, check the direction (up/down) of each bend in the table: from a DXF without direction layers every bend is taken as "up". You can also set the sequence yourself.', 'Αν το κομμάτι βγαίνει στην πράξη, έλεγξε τη φορά (πάνω/κάτω) κάθε στράντζας στον πίνακα: από DXF χωρίς layer φοράς όλες οι στράντζες θεωρούνται «πάνω». Μπορείς επίσης να ορίσεις εσύ τη σειρά.'],
+    suggest: ['Proponi una combinazione di utensili', 'Suggest a tooling combination', 'Πρότεινε συνδυασμό εργαλείων'], sugT: ['Combinazioni proposte', 'Suggested combinations', 'Προτεινόμενοι συνδυασμοί'],
+    sugRun: ['Controllo {a} di {b}…', 'Checking {a} of {b}…', 'Έλεγχος {a} από {b}…'], sugPre: ['{n} combinazioni nella libreria, {m} superano i controlli di base, {k} provate in sequenza.', '{n} combinations in the library, {m} pass the basic checks, {k} tried in sequence.', '{n} συνδυασμοί στη βιβλιοθήκη, {m} περνούν τους βασικούς ελέγχους, {k} δοκιμάστηκαν σε σειρά πατημάτων.'],
+    sugNone: ['Nessuna combinazione della libreria fa questo pezzo. Le più vicine:', 'No combination in the library makes this part. The closest ones:', 'Κανένας συνδυασμός της βιβλιοθήκης δεν βγάζει το κομμάτι. Οι πιο κοντινοί:'],
+    use: ['Usa', 'Use', 'Χρήση'], best: ['proposta', 'suggested', 'προτεινόμενο'], hitsN: ['{n} pieghe in più colpi', '{n} bends in several hits', '{n} στράντζες σε πολλά πατήματα'],
     noTool: ['Aggiungi almeno un punzone e una matrice nella libreria.', 'Add at least one punch and one die to the library.', 'Πρόσθεσε τουλάχιστον ένα μαχαίρι και έναν τάκο στη βιβλιοθήκη.'],
     layers: ['Layer del DXF', 'DXF layers', 'Layers του DXF'], rCut: ['taglio', 'cut', 'κοπή'], rBend: ['piega', 'bend', 'στράντζα'], rIgn: ['ignora', 'ignore', 'αγνόησε'],
     punches: ['Punzoni', 'Punches', 'Μαχαίρια'], dies: ['Matrici', 'Dies', 'Τάκοι'], addP: ['Aggiungi punzone da DXF', 'Add punch from DXF', 'Προσθήκη μαχαιριού από DXF'], addD: ['Aggiungi matrice da DXF', 'Add die from DXF', 'Προσθήκη τάκου από DXF'],
     libNote: ['Registra le macchine, poi i punzoni e le matrici con i loro dati, e spunta su quali macchine montano. Il DXF dell\'utensile deve contenere il profilo chiuso in sezione: punzone con la punta in basso, matrice con la V in alto. La libreria resta in questo browser: esportala per conservarla.', 'Enter the machines, then the punches and dies with their data, and tick which machines each one fits. The tool DXF must hold the closed cross-section: punch with the tip down, die with the V up. The library stays in this browser: export it to keep it.', 'Πέρασε τις μηχανές, μετά τα μαχαίρια και τους τάκους με τα στοιχεία τους, και τσέκαρε σε ποιες μηχανές κουμπώνει το καθένα. Το DXF του εργαλείου πρέπει να έχει το κλειστό προφίλ σε τομή: μαχαίρι με τη μύτη κάτω, τάκος με το V πάνω. Η βιβλιοθήκη μένει σε αυτόν τον browser: κάνε εξαγωγή για να την κρατήσεις.'],
-    name: ['Nome', 'Name', 'Όνομα'], fAngle: ['Angolo °', 'Angle °', 'Γωνία °'], fRad: ['Raggio punta mm', 'Tip radius mm', 'Ακτίνα μύτης mm'], fLoad: ['Carico max kN/m', 'Max load kN/m', 'Μέγ. φορτίο kN/m'], fLen: ['Lunghezza disponibile mm', 'Available length mm', 'Διαθέσιμο μήκος mm'],
+    name: ['Nome', 'Name', 'Όνομα'], fAngle: ['Angolo °', 'Angle °', 'Γωνία °'], fRad: ['Raggio punta mm', 'Tip radius mm', 'Ακτίνα μύτης mm'], fLoad: ['Carico max {u}/m', 'Max load {u}/m', 'Μέγ. φορτίο {u}/m'], fLen: ['Lunghezza disponibile mm', 'Available length mm', 'Διαθέσιμο μήκος mm'],
     fV: ['Apertura V mm', 'V opening mm', 'Άνοιγμα V mm'], fTmin: ['Spessore min mm', 'Min thickness mm', 'Ελάχ. πάχος mm'], fTmax: ['Spessore max mm', 'Max thickness mm', 'Μέγ. πάχος mm'], fH: ['altezza {h} mm', 'height {h} mm', 'ύψος {h} mm'],
     flip: ['Capovolgi', 'Flip', 'Αναποδογύρισμα'], mirror: ['Specchia', 'Mirror', 'Καθρέφτισμα'], del: ['Elimina', 'Delete', 'Διαγραφή'], demoTag: ['esempio', 'example', 'παράδειγμα'],
     restore: ['Ripristina libreria integrata', 'Restore built-in library', 'Επαναφορά ενσωματωμένης βιβλιοθήκης'],
@@ -909,24 +913,30 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     h3: ['Fino a 7 pieghe vengono provate tutte le sequenze. Ala minima = (V/2) ÷ cos(angolo di piega/2). Carico = 1,42 · Rm · s² ÷ V in kN/m. Raggio interno = frazione di V secondo il materiale, mai sotto il raggio del punzone.', 'Up to 7 bends, every sequence is tried. Minimum flange = (V/2) ÷ cos(bend angle/2). Load = 1.42 · Rm · t² ÷ V in kN/m. Inside radius = a fraction of V by material, never below the punch radius.', 'Μέχρι 7 στράντζες δοκιμάζονται όλες οι σειρές. Ελάχιστο φτερό = (V/2) ÷ cos(γωνία κάμψης/2). Φορτίο = 1,42 · Rm · t² ÷ V σε kN/m. Εσωτερική ακτίνα = κλάσμα του V ανά υλικό, ποτέ κάτω από την ακτίνα του μαχαιριού.'],
     h4: ['Non sono controllati: il profilo che cambia lungo la piega (si usa la sezione più larga) e le posizioni intermedie tra 0, 34, 67 e 100 % della piega.', 'Not checked: a profile that changes along the bend (the widest section is used) and the positions between 0, 34, 67 and 100 % of the bend.', 'Δεν ελέγχονται: προφίλ που αλλάζει κατά μήκος της στράντζας (χρησιμοποιείται η πιο πλατιά τομή) και οι ενδιάμεσες θέσεις ανάμεσα σε 0, 34, 67 και 100 % της στράντζας.']
   };
-  var lang, lib, view = 'check', part, selP, selD, selM = '', fit = false, userStep = false, cfg = { boxCl: 1, boxTol: 5, maxHits: 3, gShort: 1 }, si = 0, prog = 1, msgs = [], open = {}, ev = null, K = 0.4;
-  function t(k, o) { var r = T[k]; r = r ? r[LANGS.indexOf(lang)] : k; if (o) Object.keys(o).forEach(function (x) { r = r.replace('{' + x + '}', o[x]); }); return r; }
+  var lang, lib, view = 'check', part, selP, selD, selM = '', sugg = null, sugTok = 0, fit = false, userStep = false, cfg = { boxCl: 1, boxTol: 5, maxHits: 3, gShort: 1, unitK: 0 }, si = 0, prog = 1, msgs = [], open = {}, ev = null, K = 0.4;
+  function t(k, o) { var r = T[k]; r = r ? r[LANGS.indexOf(lang)] : k; if (o) Object.keys(o).forEach(function (x) { r = r.split('{' + x + '}').join(o[x]); }); return r; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
   function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
   function nf(x, d) { return (isFinite(x) ? x : 0).toLocaleString(LOC[lang], { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function UN() { return cfg.unitK ? 'kN' : 't'; }
+  function fromKN(x) { return cfg.unitK ? x : x / 9.81; }
+  function fromT(x) { return cfg.unitK ? x * 9.81 : x; }
+  function unitSel(id) { return '<label for="' + id + '" style="max-width:220px">' + t('cUnit') + '<select id="' + id + '" data-unit="1">' + opt(0, t('uT'), cfg.unitK) + opt(1, t('uK'), cfg.unitK) + '</select></label>'; }
   function num(v) { var x = parseFloat(String(v).replace(',', '.')); return isFinite(x) && x >= 0 ? x : 0; }
   function opt(v, label, c) { return '<option value="' + esc(v) + '"' + (String(v) === String(c) ? ' selected' : '') + '>' + esc(label) + '</option>'; }
   function tools(kind) { return lib.filter(function (x) { return x.kind === kind; }); }
-  function avail(kind) { var a = tools(kind); return selM ? a.filter(function (x) { return x.fits && x.fits.indexOf(selM) >= 0; }) : a; }
-  function dieOpts() {
-    var out = []; avail('die').forEach(function (d) {
+  function avail(kind, m) { var a = tools(kind); if (m === undefined) m = selM; return m ? a.filter(function (x) { return x.fits && x.fits.indexOf(m) >= 0; }) : a; }
+  function dieOpts(m) {
+    var out = []; avail('die', m).forEach(function (d) {
       var vs = P.dieVariants(d).filter(function (v) { return v.use; }), multi = vs.length > 1;
       vs.forEach(function (v) { out.push({ val: d.id + '|' + v.key, label: d.name + (multi ? ' · V' + v.V + (v.rot ? ' (' + v.rot + '°)' : '') : ''), die: d, v: v }); });
     }); return out;
   }
   function activeDie() {
-    var o = dieOpts().filter(function (x) { return x.val === selD; })[0]; if (!o) return null;
+    var o = dieOpts().filter(function (x) { return x.val === selD; })[0]; return o ? dieObj(o) : null;
+  }
+  function dieObj(o) {
     return { id: o.die.id, name: o.label, pts: o.v.pts, V: o.v.V, angle: o.die.angle, maxLoad: o.die.maxLoad, length: o.die.length, tMin: o.die.tMin, tMax: o.die.tMax, segs: o.die.segs };
   }
   function lab(g, i) { return (ev && ev.groups.length > 1 || (part.mode === 'dxf' && part.groups.length > 1) ? 'ABCDEF'.charAt(g) : '') + (i + 1); }
@@ -934,18 +944,17 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
   function saveLib() { save('pb.lib', lib); save('pb.libv', LIBV); }
   function samplePart() { part = { mode: 'manual', name: t('sample'), t: 1.5, mat: 0, out: [15, 25, 80], bends: [{ gamma: 90, dir: 1 }, { gamma: 90, dir: 1 }], blen: 500 }; si = 0; prog = 1; }
 
-  function evaluate() {
-    ev = null; var pu = byId(selP), di = activeDie();
-    if (!pu || !di || !(di.V > 0)) return;
-    var r = Math.max(MATS[part.mat].rv * di.V, pu.radius || 0), mc = byId(selM), list, issues = [], notes = [], fmax = 0, loadPerM = 0;
+  function compute(pu, di, mc, manual, cheap) {
+    if (!pu || !di || !(di.V > 0)) return null;
+    var r = Math.max(MATS[part.mat].rv * di.V, pu.radius || 0), list, issues = [], notes = [], fmax = 0, loadPerM = 0;
     var env = mc ? { ramW: mc.ramW || 0, hW: mc.hW || 0, hH: mc.hH || 0, tableW: mc.tableW || 0, gMin: mc.gMin || 0, gMax: mc.gMax || 0 } : {}; env.gShort = !!cfg.gShort;
     if (part.mode === 'manual') { var mb = part.bends.map(function (b) { return { gamma: b.gamma, dir: b.dir, len: part.blen }; }); list = [{ bends: mb, legs: P.flatLegs(part.out, mb, part.t, r, K) }]; }
     else list = part.groups;
-    if (!list.length || !list[0].bends.length) return;
+    if (!list.length || !list[0].bends.length) return null;
     var groups = list.map(function (g, gi) {
       var S = { legs: g.legs, target: g.bends.map(function (b) { return b.dir * (180 - b.gamma) * RAD; }), sgn: g.bends.map(function (b) { return b.dir; }), t: part.t, r: r, K: K, punch: pu, die: di, Rm: MATS[part.mat].Rm, bendsInfo: g.bends, env: env };
-      var ord = part.orders && part.orders[gi]; if (ord && ord.length !== g.bends.length) { ord = null; part.orders[gi] = null; }
-      var rl = P.rules(S), sq = P.sequence(S, true, ord, ord && part.sides ? part.sides[gi] : null); loadPerM = rl.loadPerM;
+      var ord = manual && part.orders && part.orders[gi]; if (ord && ord.length !== g.bends.length) { ord = null; part.orders[gi] = null; }
+      var rl = P.rules(S), sq = cheap ? { steps: [], ok: true } : P.sequence(S, true, ord, ord && part.sides ? part.sides[gi] : null); loadPerM = rl.loadPerM;
       rl.issues.forEach(function (x) { x.g = gi; if (x.bend == null && gi > 0) return; issues.push(x); });
       var broken = rl.issues.some(function (x) { return x.id === 'noNotch' || x.id === 'wideTip'; });
       sq.steps.forEach(function (s) { if (!s.ok && !(broken && /punch|die/.test(s.tool))) issues.push({ g: gi, bend: s.k, id: { punch: 'colP', die: 'colD', ram: 'colR', table: 'colT', gNone: 'gNone', gLo: 'gLo', gHi: 'gHi' }[s.tool], v: /^g(Lo|Hi)/.test(s.tool) ? s.G : null, r: s.lim }); });
@@ -980,9 +989,49 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
       var cnt = function (l) { return l.filter(function (x) { return !x.note; }).length * 100 + l.length; }, a = box(0, 1), b2 = box(1, 0), pick = cnt(a) <= cnt(b2) ? a : b2;
       order = pick === a ? [0, 1] : [1, 0]; notes = pick.filter(function (x) { return x.note; }); issues = issues.concat(pick.filter(function (x) { return !x.note; }));
     }
-    ev = { groups: groups, issues: issues, notes: notes, ok: !issues.length, fmax: fmax, loadPerM: loadPerM, order: order, r: r, pu: pu, di: di };
-    if (part.mode === 'manual' || !(part.gi < groups.length)) part.gi = 0;
-    if (si >= groups[part.gi].seq.steps.length) si = 0;
+    return { groups: groups, issues: issues, notes: notes, ok: !issues.length, fmax: fmax, loadPerM: loadPerM, order: order, r: r, pu: pu, di: di };
+  }
+  function evaluate() {
+    ev = compute(byId(selP), activeDie(), byId(selM), true, false); if (!ev) return;
+    if (part.mode === 'manual' || !(part.gi < ev.groups.length)) part.gi = 0;
+    if (si >= ev.groups[part.gi].seq.steps.length) si = 0;
+  }
+  /* try every machine + punch + die in the library: cheap rules first, then the bend sequence for the most promising */
+  function runSuggest() {
+    var tok = ++sugTok, ms = tools('machine'), cands = [], total = 0;
+    (ms.length ? ms : [null]).forEach(function (m) {
+      var ps = avail('punch', m ? m.id : ''), ds = dieOpts(m ? m.id : '');
+      ps.forEach(function (pu) { ds.forEach(function (o) {
+        total++; var di = dieObj(o), c = compute(pu, di, m, false, true); if (!c) return;
+        cands.push({ m: m, pu: pu, o: o, di: di, pre: c.issues.length, score: Math.abs(di.V / part.t - 8) });
+      }); });
+    });
+    var pass = cands.filter(function (c) { return !c.pre; }).length;
+    cands.sort(function (a, b) { return a.pre - b.pre || a.score - b.score || (a.m && b.m ? (a.m.tons || 0) - (b.m.tons || 0) : 0); });
+    var work = cands.slice(0, 40); sugg = { total: total, pass: pass, k: work.length, done: 0, rows: [], running: true };
+    var step = function () {
+      if (tok !== sugTok) return; var t0 = Date.now();
+      while (sugg.done < work.length && Date.now() - t0 < 60) {
+        var c = work[sugg.done++], e = compute(c.pu, c.di, c.m, false, false);
+        if (e) sugg.rows.push({ c: c, n: e.issues.length, notes: e.notes.length, fmax: e.fmax });
+      }
+      if (sugg.done >= work.length) { sugg.running = false; sugg.rows.sort(function (a, b) { return a.n - b.n || a.notes - b.notes || a.c.score - b.c.score; }); }
+      var el = document.getElementById('sugg'); if (el) el.innerHTML = suggHtml();
+      if (sugg.running) setTimeout(step, 0);
+    };
+    var el0 = document.getElementById('sugg'); if (el0) el0.innerHTML = suggHtml(); setTimeout(step, 30);
+  }
+  function suggHtml() {
+    if (!sugg) return '';
+    var h = '<section><h2>' + t('sugT') + '</h2>';
+    if (sugg.running) return h + '<p class="mute num">' + t('sugRun', { a: sugg.done, b: sugg.k }) + '</p></section>';
+    var anyOk = sugg.rows.some(function (r) { return !r.n; });
+    h += '<p class="mute" style="font-size:13px">' + t('sugPre', { n: sugg.total, m: sugg.pass, k: sugg.k }) + '</p>' + (anyOk ? '' : '<p class="msg">' + t('sugNone') + '</p>');
+    h += '<div class="tw"><table>' + sugg.rows.slice(0, 8).map(function (r, i) {
+      var c = r.c;
+      return '<tr><td>' + (r.n ? '<span class="pill bad">✕ ' + r.n + '</span>' : '<span class="pill ok">✓</span>') + '</td><td>' + (c.m ? esc(c.m.name) + '<br>' : '') + '<b>' + esc(c.pu.name) + '</b> + <b>' + esc(c.o.label) + '</b><br><span class="mute num" style="font-size:12px">V' + c.di.V + ' · ' + nf(r.fmax, 1) + ' t' + (r.notes ? ' · ' + t('hitsN', { n: r.notes }) : '') + (!r.n && i === 0 ? ' · ' + t('best') : '') + '</span></td><td class="n"><button class="btn sm" type="button" data-use="' + i + '">' + t('use') + '</button></td></tr>';
+    }).join('') + '</table></div></section>';
+    return h;
   }
   function path(pts, X, Y) { var s = ''; for (var i = 0; i < pts.length; i++) s += (i ? 'L' : 'M') + X(pts[i][0]) + ' ' + Y(pts[i][1]); return s + 'Z'; }
   function simSvg() {
@@ -1028,17 +1077,18 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
   }
   function issueText(x) {
     var d = x.id === 'load' ? 0 : 1, o = { b: x.bend == null ? '' : lab(x.g || 0, x.bend), V: ev.di.V }, z = /Angle|Len|Open/.test(x.id) ? 0 : d;
-    if (x.v != null) o.v = nf(x.v, z); if (x.r != null) o.r = nf(x.r, z); if (x.hi != null) o.hi = nf(x.hi, 1); if (x.n != null) o.n = x.n; if (x.tool) o.tool = x.tool; if (x.id === 'hits') o.r = x.r;
+    o.u = UN(); var cv = x.id === 'load' ? fromKN : x.id === 'mForce' ? fromT : null; if (cv) z = cfg.unitK ? 0 : 1;
+    if (x.v != null) o.v = nf(cv ? cv(x.v) : x.v, z); if (x.r != null) o.r = nf(cv ? cv(x.r) : x.r, z); if (x.hi != null) o.hi = nf(x.hi, 1); if (x.n != null) o.n = x.n; if (x.tool) o.tool = x.tool; if (x.id === 'hits') o.r = x.r;
     return t(x.id, o);
   }
   function toolThumb(tl) {
     var b = P.bbox(tl.pts), pad = 2;
     return '<svg viewBox="' + (b[0] - pad) + ' ' + (-b[3] - pad) + ' ' + (b[2] - b[0] + 2 * pad) + ' ' + (b[3] - b[1] + 2 * pad) + '" role="img" aria-label="' + esc(tl.name) + '"><path d="' + path(tl.pts, function (x) { return x.toFixed(2); }, function (y) { return (-y).toFixed(2); }) + '" fill="var(--tool)" stroke="var(--ink)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>';
   }
-  function tf(tl, f, label, text) { var id = 't-' + tl.id + '-' + f; return '<label for="' + id + '">' + esc(label) + '<input id="' + id + '" type="' + (text ? 'text' : 'number') + '"' + (text ? '' : ' inputmode="decimal" min="0" step="any"') + ' data-tool="' + esc(tl.id) + '" data-tf="' + f + '" value="' + esc(tl[f] == null ? (text ? '' : 0) : tl[f]) + '"></label>'; }
+  function tf(tl, f, label, text) { var id = 't-' + tl.id + '-' + f, val = tl[f]; if (f === 'maxLoad' && val != null) val = +fromKN(val).toFixed(cfg.unitK ? 0 : 1); if (f === 'tons' && val != null) val = +fromT(val).toFixed(cfg.unitK ? 0 : 1); return '<label for="' + id + '">' + esc(label) + '<input id="' + id + '" type="' + (text ? 'text' : 'number') + '"' + (text ? '' : ' inputmode="decimal" min="0" step="any"') + ' data-tool="' + esc(tl.id) + '" data-tf="' + f + '" value="' + esc(val == null ? (text ? '' : 0) : val) + '"></label>'; }
   function toolCard(tl) {
-    var f = tl.kind === 'punch' ? tf(tl, 'angle', t('fAngle')) + tf(tl, 'radius', t('fRad')) + tf(tl, 'maxLoad', t('fLoad')) + tf(tl, 'length', t('fLen'))
-      : tf(tl, 'angle', t('fAngle')) + tf(tl, 'maxLoad', t('fLoad')) + tf(tl, 'length', t('fLen')) + tf(tl, 'tMin', t('fTmin')) + tf(tl, 'tMax', t('fTmax'));
+    var f = tl.kind === 'punch' ? tf(tl, 'angle', t('fAngle')) + tf(tl, 'radius', t('fRad')) + tf(tl, 'maxLoad', t('fLoad', { u: UN() })) + tf(tl, 'length', t('fLen'))
+      : tf(tl, 'angle', t('fAngle')) + tf(tl, 'maxLoad', t('fLoad', { u: UN() })) + tf(tl, 'length', t('fLen')) + tf(tl, 'tMin', t('fTmin')) + tf(tl, 'tMax', t('fTmax'));
     var vs = '';
     if (tl.kind === 'die') vs = '<div class="vlist"><span class="mute" style="font-size:12px">' + t('vList') + '</span>' + P.dieVariants(tl).map(function (v) {
       var id = 'vn-' + tl.id + '-' + v.key.replace(':', '_');
@@ -1054,10 +1104,10 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
   }
   function machineCard(m) {
     var np = 0, nd = 0; lib.forEach(function (x) { if (x.fits && x.fits.indexOf(m.id) >= 0) { if (x.kind === 'punch') np++; else if (x.kind === 'die') nd++; } });
-    return '<article class="tool">' + tf(m, 'name', t('name'), true) + '<div class="inputs">' + tf(m, 'tons', t('fTons')) + tf(m, 'length', t('fMLen')) + tf(m, 'open', t('fOpen')) + tf(m, 'clamp', t('fClamp'), true) + tf(m, 'ramW', t('fRamW')) + tf(m, 'hW', t('fHW')) + tf(m, 'hH', t('fHH')) + tf(m, 'tableW', t('fTabW')) + tf(m, 'gMin', t('fGMin')) + tf(m, 'gMax', t('fGMax')) + '</div><p class="mute" style="font-size:12px">' + t('zero') + '</p><div class="actions" style="align-items:center"><span class="mute num" style="font-size:12px;flex:1">' + t('nTools', { p: np, d: nd }) + (m.sample ? ' · <span class="tag">' + t('demoTag') + '</span>' : '') + '</span><button class="btn sm" type="button" data-del="' + esc(m.id) + '">' + t('del') + '</button></div></article>';
+    return '<article class="tool">' + tf(m, 'name', t('name'), true) + '<div class="inputs">' + tf(m, 'tons', t('fTons', { u: UN() })) + tf(m, 'length', t('fMLen')) + tf(m, 'open', t('fOpen')) + tf(m, 'clamp', t('fClamp'), true) + tf(m, 'ramW', t('fRamW')) + tf(m, 'hW', t('fHW')) + tf(m, 'hH', t('fHH')) + tf(m, 'tableW', t('fTabW')) + tf(m, 'gMin', t('fGMin')) + tf(m, 'gMax', t('fGMax')) + '</div><p class="mute" style="font-size:12px">' + t('zero') + '</p><div class="actions" style="align-items:center"><span class="mute num" style="font-size:12px;flex:1">' + t('nTools', { p: np, d: nd }) + (m.sample ? ' · <span class="tag">' + t('demoTag') + '</span>' : '') + '</span><button class="btn sm" type="button" data-del="' + esc(m.id) + '">' + t('del') + '</button></div></article>';
   }
   function libView() {
-    return '<p class="mute" style="max-width:70ch;font-size:13px">' + t('libNote') + '</p>' +
+    return '<p class="mute" style="max-width:70ch;font-size:13px">' + t('libNote') + '</p>' + unitSel('u-lib') +
       '<section><h2>' + t('machines') + '</h2>' + tools('machine').map(machineCard).join('') + '<div><button class="btn pri" type="button" data-act="addM">' + t('addM') + '</button></div></section>' +
       '<section><h2>' + t('punches') + '</h2>' + tools('punch').map(toolCard).join('') + '<div><input class="hid" type="file" id="fPunch" accept=".dxf,.DXF" multiple><label class="btn pri" for="fPunch">' + t('addP') + '</label></div></section>' +
       '<section><h2>' + t('dies') + '</h2>' + tools('die').map(toolCard).join('') + '<div><input class="hid" type="file" id="fDie" accept=".dxf,.DXF" multiple><label class="btn pri" for="fDie">' + t('addD') + '</label></div></section>' +
@@ -1113,10 +1163,10 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
       (sq.steps.length > 1 ? '<div class="actions"><button class="btn sm" type="button" data-act="' + (sq.manual ? 'seqAuto' : 'seqSet') + '">' + t(sq.manual ? 'autoSeq' : 'setSeq') + '</button></div>' : '') +
       '<p class="mute" style="font-size:12px">' + (sq.manual ? t('seqMan') : sq.ok && sq.searched ? t('seqAuto') : !sq.ok && sq.searched ? t('seqNone') : !sq.searched ? t('seqList') : '') + (sq.steps.some(function (s) { return s.mirror; }) ? ' · ↔ = ' + t('turned') : '') + (st && st.G > 0 ? ' · ' + t('gaugeAt', { g: nf(st.G, 1) }) : '') + '</p>' + (why ? '<p class="msg">' + esc(issueText(why)) + (st.other ? ' ' + t('gSide') : '') + '</p>' : '') + (!sq.ok ? '<p class="mute" style="font-size:13px;max-width:70ch">' + t('dirHint') + '</p>' : '') + '</section>';
     h += '<div class="draw" id="sim"></div><div class="actions"><button class="btn sm" type="button" data-act="zoom">' + t(fit ? 'zoomT' : 'zoomP') + '</button></div><label for="i-prog">' + t('prog') + '<input id="i-prog" type="range" min="0" max="100" step="1" value="' + Math.round(prog * 100) + '" data-prog="1"></label>';
-    h += '<p class="mute num" style="font-size:13px">' + t('info', { r: nf(ev.r, 1), f: nf(ev.loadPerM, 0), bd: nf(P.bendDeduction(Math.PI / 2, part.t, ev.r, K), 2) }) + ' · ' + t('force', { f: nf(ev.fmax, 1) }) + '</p>';
+    h += '<p class="mute num" style="font-size:13px">' + t('info', { u: UN(), r: nf(ev.r, 1), f: nf(fromKN(ev.loadPerM), cfg.unitK ? 0 : 1), bd: nf(P.bendDeduction(Math.PI / 2, part.t, ev.r, K), 2) }) + ' · ' + t('force', { u: UN(), f: nf(fromT(ev.fmax), cfg.unitK ? 0 : 1) }) + '</p>';
     if (n) h += '<section><h2>' + t('found') + '</h2><ol class="issues">' + ev.issues.map(function (x, i) { return '<li><span class="no">' + (i + 1) + '</span><span>' + esc(issueText(x)) + '</span></li>'; }).join('') + '</ol></section>';
     if (ev.notes.length) h += '<section><h2>' + t('notes') + '</h2><ol class="issues notes">' + ev.notes.map(function (x) { return '<li><span>' + esc(issueText(x)) + '</span></li>'; }).join('') + '</ol></section>';
-    h += '<details id="dBox"' + (open.dBox ? ' open' : '') + '><summary>' + t('boxT') + '</summary><div class="din"><label class="chk" for="c-gShort"><input type="checkbox" id="c-gShort" data-cfgb="gShort"' + (cfg.gShort ? ' checked' : '') + '>' + t('cGShort') + '</label><div class="inputs">' + [['boxCl', 'cCl'], ['boxTol', 'cTol'], ['maxHits', 'cHits']].map(function (c) { return '<label for="c-' + c[0] + '">' + t(c[1]) + '<input id="c-' + c[0] + '" type="number" inputmode="decimal" min="0" step="any" data-cfg="' + c[0] + '" value="' + cfg[c[0]] + '"></label>'; }).join('') + '</div></div></details>';
+    h += '<details id="dBox"' + (open.dBox ? ' open' : '') + '><summary>' + t('boxT') + '</summary><div class="din"><label class="chk" for="c-gShort"><input type="checkbox" id="c-gShort" data-cfgb="gShort"' + (cfg.gShort ? ' checked' : '') + '>' + t('cGShort') + '</label>' + unitSel('u-chk') + '<div class="inputs">' + [['boxCl', 'cCl'], ['boxTol', 'cTol'], ['maxHits', 'cHits']].map(function (c) { return '<label for="c-' + c[0] + '">' + t(c[1]) + '<input id="c-' + c[0] + '" type="number" inputmode="decimal" min="0" step="any" data-cfg="' + c[0] + '" value="' + cfg[c[0]] + '"></label>'; }).join('') + '</div></div></details>';
     el.innerHTML = h; document.getElementById('sim').innerHTML = simSvg();
   }
 
@@ -1149,17 +1199,18 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
   var app = document.getElementById('app');
   app.addEventListener('input', function (e) {
     var el = e.target, d = el.dataset;
-    if (!d.prog) userStep = false;
+    if (!d.prog) { userStep = false; sugg = null; sugTok++; }
     if (d.prog) { prog = +el.value / 100; var s = document.getElementById('sim'); if (s) s.innerHTML = simSvg(); return; }
     if (d.cfg) { var cv = num(el.value); cfg[d.cfg] = d.cfg === 'maxHits' ? Math.max(1, Math.round(cv)) : cv; save('pb.cfg', cfg); return; }
     if (d.vn) { var dv = byId(d.vn); if (dv) { dv.vnom = dv.vnom || {}; dv.vnom[d.k] = num(el.value); saveLib(); } return; }
-    if (d.tool) { var tl = byId(d.tool); if (tl) { tl[d.tf] = d.tf === 'name' || d.tf === 'clamp' || d.tf === 'segs' ? el.value : num(el.value); saveLib(); } return; }
+    if (d.tool) { var tl = byId(d.tool); if (tl) { tl[d.tf] = d.tf === 'name' || d.tf === 'clamp' || d.tf === 'segs' ? el.value : d.tf === 'maxLoad' ? (cfg.unitK ? num(el.value) : num(el.value) * 9.81) : d.tf === 'tons' ? (cfg.unitK ? num(el.value) / 9.81 : num(el.value)) : num(el.value); saveLib(); } return; }
     if (d.f) { var v = num(el.value); if (!(v > 0)) return; part[d.f] = v; update(); return; }
     if (d.leg) { var l = num(el.value); if (!(l > 0)) return; part.out[+d.leg] = l; update(); return; }
     if (d.bg) { var g = num(el.value); if (!(g >= 1 && g <= 179)) return; (part.mode === 'manual' ? part.bends : part.groups[part.gi].bends)[+d.bg].gamma = g; update(); }
   });
   app.addEventListener('change', function (e) {
     var el = e.target, d = el.dataset; if (!d.prog) userStep = false;
+    if (!d.prog && !d.gs && d.s !== 'punch' && d.s !== 'die' && d.s !== 'group') { sugg = null; sugTok++; }
     if (el.id === 'fPart') { msgs = []; readAll(el.files, function (name, text) {
       try { var x = Q.readDXF(text), roles = {}; x.pieces.forEach(function (p) { if (!(p.layer in roles)) roles[p.layer] = Q.defaultRole(p.layer); });
         var m = /(\d+(?:[.,]\d+)?)\s*mm/i.exec(name), th = m ? num(m[1]) : 0;
@@ -1167,6 +1218,7 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
       } catch (err) { msgs.push(name + ': ' + t('errRead')); } }, render); return; }
     if (el.id === 'fPunch' || el.id === 'fDie') { msgs = []; var kind = el.id === 'fPunch' ? 'punch' : 'die'; readAll(el.files, function (n, x) { addTool(kind, n, x); }, function () { saveLib(); render(); }); return; }
     if (el.id === 'fLib') { msgs = []; readAll(el.files, function (n, x) { try { var a = JSON.parse(x); a = Array.isArray(a) ? a : a.tools; var okc = 0; a.forEach(function (tl) { if (tl && (tl.kind === 'machine' || ((tl.kind === 'punch' || tl.kind === 'die') && Array.isArray(tl.pts) && tl.pts.length > 2))) { tl.id = tl.id && !byId(tl.id) ? String(tl.id) : tl.kind[0] + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); tl.name = String(tl.name || tl.id); lib.push(tl); okc++; } }); if (!okc) throw 0; } catch (err) { msgs.push(n + ': ' + t('errLib')); } }, function () { fixSel(); saveLib(); render(); }); return; }
+    if (d.unit) { cfg.unitK = +el.value ? 1 : 0; save('pb.cfg', cfg); render(); return; }
     if (d.cfgb) { cfg[d.cfgb] = el.checked ? 1 : 0; save('pb.cfg', cfg); update(); return; }
     if (d.cfg) { update(); return; }
     if (d.fit) { var ft = byId(d.fit); if (ft) { ft.fits = (ft.fits || []).filter(function (x) { return x !== d.m; }); if (el.checked) ft.fits.push(d.m); saveLib(); render(); } return; }
@@ -1189,6 +1241,8 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     else if (d.act === 'seqSet') { part.orders = part.orders || {}; part.orders[part.gi] = ev.groups[part.gi].seq.steps.map(function (s) { return s.k; }); userStep = true; update(); }
     else if (d.act === 'seqAuto') { part.orders[part.gi] = null; if (part.sides) part.sides[part.gi] = null; userStep = false; update(); }
     else if (d.mv) { var o = part.orders[part.gi], i0 = +d.mv, i1 = i0 + (+d.by); if (o && i1 >= 0 && i1 < o.length) { var tmp = o[i0]; o[i0] = o[i1]; o[i1] = tmp; si = i1; userStep = true; prog = 1; update(); } }
+    else if (d.act === 'suggest') runSuggest();
+    else if (d.use && sugg) { var rw = sugg.rows[+d.use]; if (rw) { selM = rw.c.m ? rw.c.m.id : ''; selP = rw.c.pu.id; selD = rw.c.o.val; if (part.orders) part.orders = {}; userStep = false; si = 0; render(); } }
     else if (d.act === 'zoom') { fit = !fit; update(); }
     else if (d.act === 'sample') { msgs = []; samplePart(); render(); }
     else if (d.act === 'manual') { msgs = []; if (part.mode !== 'manual') part = { mode: 'manual', name: '', t: part.t, mat: part.mat, out: [30, 50], bends: [{ gamma: 90, dir: 1 }], blen: 500 }; si = 0; render(); }
