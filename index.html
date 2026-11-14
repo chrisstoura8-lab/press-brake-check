@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Press Brake Tooling Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* layout idea: a setup sheet for the press brake. Part and tooling on top, verdict, then the cross-section of each bend step; the tool library is its own view. */
+:root{
+  --paper:#eef0ef; --card:#fafbfa; --ink:#182024; --mute:#5c686e; --line:#cdd3d4; --field:#ffffff; --metal:#dfe4e5; --tool:#8b979c;
+  --accent:#1f5fa8; --accent-ink:#ffffff; --bad:#c22d1e; --bad-bg:#fbe6e2; --ok:#1f6f4a; --ok-bg:#e0f1e8;
+  --display:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#14191b; --card:#1c2326; --ink:#e6ebec; --mute:#96a3a8; --line:#333d41; --field:#12171a; --metal:#2b3539; --tool:#5d6a70;
+    --accent:#6ea3db; --accent-ink:#10161a; --bad:#ff7a66; --bad-bg:#3d1c17; --ok:#5fc497; --ok-bg:#16301f;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#14191b; --card:#1c2326; --ink:#e6ebec; --mute:#96a3a8; --line:#333d41; --field:#12171a; --metal:#2b3539; --tool:#5d6a70;
+  --accent:#6ea3db; --accent-ink:#10161a; --bad:#ff7a66; --bad-bg:#3d1c17; --ok:#5fc497; --ok-bg:#16301f;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.45 var(--body);-webkit-text-size-adjust:100%}
+.wrap{max-width:920px;margin:0 auto;padding:20px 16px 48px;display:flex;flex-direction:column;gap:18px}
+h1,h2{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:28px;line-height:1.1;font-weight:700}
+h2{font-size:17px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+p{margin:0}
+.mute{color:var(--mute)} .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header.top{display:flex;gap:12px 20px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px}
+header.top p{max-width:60ch;margin-top:6px}
+.langs{display:flex;border:1px solid var(--ink);border-radius:4px;overflow:hidden}
+.langs button{border:0;background:transparent;color:var(--ink);font:600 13px var(--mono);padding:7px 11px;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{border:1px solid var(--ink);background:var(--card);border-radius:4px;padding:9px 14px;font-weight:500;cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.drop{border:1.5px dashed var(--mute);border-radius:6px;padding:12px;display:flex;flex-direction:row;gap:10px;align-items:center;flex-wrap:wrap}
+.drop.over{border-color:var(--accent);background:var(--card)}
+.drop input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.drop p{flex:1 1 160px;font-size:13px}
+.msg{background:var(--bad-bg);color:var(--bad);border-left:4px solid var(--bad);padding:9px 12px;border-radius:3px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:5px 12px;font-size:13px;cursor:pointer;max-width:100%;overflow-wrap:anywhere}
+.tabs button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.inputs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute);min-width:0}
+input[type=number],select{background:var(--field);border:1px solid var(--line);border-radius:4px;padding:7px 8px;width:100%;min-width:0;font-family:var(--mono);font-size:14px;color:var(--ink)}
+.verdict{border-radius:6px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid;border-left-width:6px}
+.verdict.bad{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.verdict.ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.verdict b{font:700 22px var(--display);letter-spacing:.01em}
+.verdict span{font-size:13px;color:var(--ink)}
+.draw{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px}
+.draw svg{display:block;width:100%;height:auto;max-height:70vh;overflow:hidden}
+.mk{cursor:pointer}
+.issues{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.issues li{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:4px;padding:8px 10px;cursor:pointer}
+.issues li.sel{outline:2px solid var(--bad)}
+.issues .no{flex:none;width:22px;height:22px;border-radius:50%;background:var(--bad);color:#fff;font:600 12px/22px var(--mono);text-align:center}
+.issues small{display:block;color:var(--mute)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:7px 6px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tw{overflow-x:auto}
+.pill{display:inline-block;font:600 12px var(--mono);border-radius:99px;padding:2px 9px;border:1px solid;white-space:nowrap}
+.pill.ok{color:var(--ok);background:var(--ok-bg)} .pill.bad{color:var(--bad);background:var(--bad-bg)} .pill.na{color:var(--mute)}
+details{border:1px solid var(--line);border-radius:6px;background:var(--card)}
+details>summary{cursor:pointer;padding:10px 14px;font-weight:500}
+.din{padding:4px 14px 14px;display:flex;flex-direction:column;gap:14px}
+.din ul{margin:0;padding-left:20px;max-width:70ch;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.views{display:flex;border-bottom:1px solid var(--line);gap:4px}
+.views button{border:0;background:transparent;padding:9px 14px;font-weight:600;color:var(--mute);border-bottom:3px solid transparent;cursor:pointer}
+.views button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.steps button{border:1px solid var(--line);background:var(--card);border-radius:4px;padding:6px 10px;font:500 13px var(--mono);cursor:pointer}
+.steps button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.steps button.bad{border-color:var(--bad);color:var(--bad)}
+.steps button.bad[aria-pressed="true"]{background:var(--bad);color:#fff}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=text]{background:var(--field);border:1px solid var(--line);border-radius:4px;padding:7px 8px;width:100%;min-width:0;font-size:14px;color:var(--ink)}
+td input[type=number]{width:78px;padding:5px 6px} td select{width:auto;max-width:100%;padding:5px 6px}
+.tool{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.thead{display:flex;gap:12px;align-items:center}
+.tthumb{flex:0 0 64px;height:64px;border:1px solid var(--line);border-radius:4px;background:var(--field);padding:4px}
+.tthumb svg{width:100%;height:100%}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btn[disabled]{opacity:.35;cursor:default}
+.hid{position:absolute;width:1px;height:1px;opacity:0}
+.vlist{display:flex;flex-direction:column;gap:6px}
+.vrow{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;font-size:13px}
+.vrow label{flex:0 1 110px}
+.vrow .chk{flex:none;padding-bottom:6px}
+.fits{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;font-size:13px}
+.chk{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--ink)}
+.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.tag{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--mute);color:var(--mute);border-radius:99px;padding:1px 8px}
+.issues li{cursor:default}
+.issues.notes li{border-left-color:var(--accent)}
+section{display:flex;flex-direction:column;gap:10px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 'date', tools: [...] } */
+(function (G) {
+  'use strict';
+  var TOL = 0.05;
+
+  /* ---------- DXF reading ---------- */
+  function parsePairs(text) {
+    var L = text.split(/\r\n|\r|\n/), P = [];
+    for (var i = 0; i + 1 < L.length; i += 2) {
+      var c = parseInt(L[i], 10);
+      if (!isNaN(c)) P.push([c, L[i + 1].trim()]);
+    }
+    return P;
+  }
+  var UNIT = { 1: 25.4, 2: 304.8, 4: 1, 5: 10, 6: 1000 };
+
+  function readDXF(text) {
+    if (/^AutoCAD Binary DXF/.test(text)) throw new Error('binary');
+    var P = parsePairs(text), scale = 1, s = -1, i;
+    for (i = 0; i < P.length - 1; i++) {
+      if (P[i][0] === 9 && P[i][1] === '$INSUNITS') { scale = UNIT[parseInt(P[i + 1][1], 10)] || 1; }
+      if (P[i][0] === 0 && P[i][1] === 'SECTION' && P[i + 1][0] === 2 && P[i + 1][1] === 'ENTITIES') { s = i + 2; break; }
+    }
+    if (s < 0) throw new Error('noentities');
+    var ents = [], cur = null;
+    for (i = s; i < P.length; i++) {
+      if (P[i][0] === 0) { if (P[i][1] === 'ENDSEC') break; cur = { type: P[i][1], p: [] }; ents.push(cur); }
+      else if (cur) cur.p.push(P[i]);
+    }
+    return toPieces(ents, scale);
+  }
+
+  function val(e, code, def) {
+    for (var i = 0; i < e.p.length; i++) if (e.p[i][0] === code) return parseFloat(e.p[i][1]);
+    return def;
+  }
+  function str(e, code, def) {
+    for (var i = 0; i < e.p.length; i++) if (e.p[i][0] === code) return e.p[i][1];
+    return def;
+  }
+  function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+  function polyLen(pts) { var s = 0; for (var i = 1; i < pts.length; i++) s += dist(pts[i - 1], pts[i]); return s; }
+
+  function arcPts(cx, cy, r, a0, sweep) {
+    var as = Math.abs(sweep);
+    var step = 2 * Math.acos(Math.max(-1, 1 - Math.min(0.01, r * 0.5) / r));
+    var n = Math.ceil(as / step);
+    n = Math.max(n, Math.ceil(as / (Math.PI / 12)), 2);
+    n = Math.min(n, 2000);
+    var pts = [];
+    for (var k = 0; k <= n; k++) { var a = a0 + sweep * k / n; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+    return pts;
+  }
+
+  function bulgeSeg(p1, p2, b) {
+    var th = 4 * Math.atan(b), d = dist(p1, p2);
+    if (d < 1e-9) return { pts: [p2], len: 0 };
+    var r = d / (2 * Math.sin(Math.abs(th) / 2));
+    var k = (1 - b * b) / (4 * b);
+    var cx = (p1[0] + p2[0]) / 2 - (p2[1] - p1[1]) * k, cy = (p1[1] + p2[1]) / 2 + (p2[0] - p1[0]) * k;
+    var a0 = Math.atan2(p1[1] - cy, p1[0] - cx);
+    var pts = arcPts(cx, cy, r, a0, th); pts.shift();
+    pts[pts.length - 1] = p2;
+    return { pts: pts, len: r * Math.abs(th) };
+  }
+
+  function polyPiece(verts, closed) {
+    var pts = [[verts[0].x, verts[0].y]], len = 0, n = verts.length, m = closed ? n : n - 1;
+    for (var i = 0; i < m; i++) {
+      var a = verts[i], b = verts[(i + 1) % n], p1 = [a.x, a.y], p2 = [b.x, b.y];
+      if (a.b) { var s = bulgeSeg(p1, p2, a.b); len += s.len; pts = pts.concat(s.pts); }
+      else { len += dist(p1, p2); pts.push(p2); }
+    }
+    return { pts: pts, len: len, closed: !!closed };
+  }
+
+  function splinePts(deg, knots, cps, ws) {
+    var n = cps.length - 1, N = Math.max(60, cps.length * 24), out = [];
+    var t0 = knots[deg], t1 = knots[n + 1];
+    for (var k = 0; k <= N; k++) {
+      var t = t0 + (t1 - t0) * k / N, s = deg;
+      while (s < n && knots[s + 1] <= t) s++;
+      var d = [];
+      for (var j = 0; j <= deg; j++) { var c = cps[j + s - deg], w = ws ? ws[j + s - deg] : 1; d.push([c[0] * w, c[1] * w, w]); }
+      for (var r = 1; r <= deg; r++) for (j = deg; j >= r; j--) {
+        var den = knots[j + 1 + s - r] - knots[j + s - deg], al = den ? (t - knots[j + s - deg]) / den : 0;
+        d[j] = [(1 - al) * d[j - 1][0] + al * d[j][0], (1 - al) * d[j - 1][1] + al * d[j][1], (1 - al) * d[j - 1][2] + al * d[j][2]];
+      }
+      out.push([d[deg][0] / d[deg][2], d[deg][1] / d[deg][2]]);
+    }
+    return out;
+  }
+
+  function toPieces(ents, scale) {
+    var out = [], skipped = {}, i, j, e;
+    function push(pc, e, mirror) {
+      if (!pc || pc.pts.length < 2) return;
+      var pts = pc.pts.map(function (p) { return [(mirror ? -p[0] : p[0]) * scale, p[1] * scale]; });
+      var len = pc.len * scale;
+      var closed = pc.closed || (pts.length > 2 && dist(pts[0], pts[pts.length - 1]) < TOL);
+      out.push({ pts: pts, len: len, closed: closed, layer: str(e, 8, '0'), kind: e.type });
+    }
+    for (i = 0; i < ents.length; i++) {
+      e = ents[i];
+      var mir = val(e, 230, 1) < 0;
+      if (e.type === 'LINE') {
+        var a = [val(e, 10, 0), val(e, 20, 0)], b = [val(e, 11, 0), val(e, 21, 0)];
+        push({ pts: [a, b], len: dist(a, b) }, e, false);
+      } else if (e.type === 'CIRCLE') {
+        var r = val(e, 40, 0);
+        push({ pts: arcPts(val(e, 10, 0), val(e, 20, 0), r, 0, 2 * Math.PI), len: 2 * Math.PI * r, closed: true }, e, mir);
+      } else if (e.type === 'ARC') {
+        var r2 = val(e, 40, 0), a0 = val(e, 50, 0) * Math.PI / 180, a1 = val(e, 51, 0) * Math.PI / 180;
+        var sw = a1 - a0; while (sw <= 0) sw += 2 * Math.PI;
+        push({ pts: arcPts(val(e, 10, 0), val(e, 20, 0), r2, a0, sw), len: r2 * sw }, e, mir);
+      } else if (e.type === 'LWPOLYLINE') {
+        var vs = [], v = null;
+        for (j = 0; j < e.p.length; j++) {
+          var c = e.p[j][0], x = parseFloat(e.p[j][1]);
+          if (c === 10) { v = { x: x, y: 0, b: 0 }; vs.push(v); }
+          else if (c === 20 && v) v.y = x;
+          else if (c === 42 && v) v.b = x;
+        }
+        if (vs.length > 1) push(polyPiece(vs, (val(e, 70, 0) & 1) === 1), e, mir);
+      } else if (e.type === 'POLYLINE') {
+        var fl = val(e, 70, 0), vv = [];
+        for (j = i + 1; j < ents.length && ents[j].type === 'VERTEX'; j++)
+          vv.push({ x: val(ents[j], 10, 0), y: val(ents[j], 20, 0), b: val(ents[j], 42, 0) });
+        if (vv.length > 1 && !(fl & 80)) push(polyPiece(vv, (fl & 1) === 1), e, mir);
+        i = j - 1;
+      } else if (e.type === 'SPLINE') {
+        var deg = val(e, 71, 3), kn = [], cps = [], ws = [], fit = [], cp = null, fp = null;
+        for (j = 0; j < e.p.length; j++) {
+          var cc = e.p[j][0], xv = parseFloat(e.p[j][1]);
+          if (cc === 40) kn.push(xv);
+          else if (cc === 41) ws.push(xv);
+          else if (cc === 10) { cp = [xv, 0]; cps.push(cp); }
+          else if (cc === 20 && cp) cp[1] = xv;
+          else if (cc === 11) { fp = [xv, 0]; fit.push(fp); }
+          else if (cc === 21 && fp) fp[1] = xv;
+        }
+        var sp;
+        if (cps.length > deg && kn.length === cps.length + deg + 1) sp = splinePts(deg, kn, cps, ws.length === cps.length ? ws : null);
+        else sp = fit.length > 1 ? fit : cps;
+        if (sp.length > 1) push({ pts: sp, len: polyLen(sp) }, e, false);
+      } else if (e.type === 'ELLIPSE') {
+        var cx = val(e, 10, 0), cy = val(e, 20, 0), mx = val(e, 11, 1), my = val(e, 21, 0), ra = val(e, 40, 1);
+        var p0 = val(e, 41, 0), p1 = val(e, 42, 2 * Math.PI); if (p1 <= p0) p1 += 2 * Math.PI;
+        var ne = Math.max(16, Math.ceil(256 * (p1 - p0) / (2 * Math.PI))), ep = [];
+        for (j = 0; j <= ne; j++) {
+          var pa = p0 + (p1 - p0) * j / ne;
+          ep.push([cx + Math.cos(pa) * mx - Math.sin(pa) * ra * my, cy + Math.cos(pa) * my + Math.sin(pa) * ra * mx]);
+        }
+        push({ pts: ep, len: polyLen(ep), closed: Math.abs(p1 - p0 - 2 * Math.PI) < 1e-6 }, e, false);
+      } else if (e.type === 'INSERT') skipped.INSERT = (skipped.INSERT || 0) + 1;
+    }
+    return { pieces: out, inserts: skipped.INSERT || 0 };
+  }
+
+  function defaultRole(layer) {
+    var s = layer.toLowerCase();
+    if (/bend|pieg|biege|στραντζ|strantz|fold/.test(s)) return 'bend';
+    if (/tangent|center|text|dim|annot|defpoints|altrep|roll|unconsumed|note|etch|mark|grav|feature|title|frame|quot|hidden/.test(s)) return 'ignore';
+    return 'cut';
+  }
+
+  /* ---------- geometry ---------- */
+  function chain(pieces) {
+    var closed = [], open = [], segs = [], i;
+    pieces.forEach(function (p) { if (p.closed) closed.push(p.pts); else segs.push(p.pts); });
+    var cell = TOL * 4, map = {}, used = new Uint8Array(segs.length);
+    function key(ix, iy) { return ix + ',' + iy; }
+    function add(pt, i, end) { var k = key(Math.round(pt[0] / cell), Math.round(pt[1] / cell)); (map[k] = map[k] || []).push([i, end]); }
+    for (i = 0; i < segs.length; i++) { add(segs[i][0], i, 0); add(segs[i][segs[i].length - 1], i, 1); }
+    function find(pt) {
+      var ix = Math.round(pt[0] / cell), iy = Math.round(pt[1] / cell);
+      for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) {
+        var l = map[key(ix + dx, iy + dy)]; if (!l) continue;
+        for (var k = 0; k < l.length; k++) {
+          var c = l[k]; if (used[c[0]]) continue;
+          var s = segs[c[0]], q = c[1] ? s[s.length - 1] : s[0];
+          if (dist(pt, q) < TOL * 2) return c;
+        }
+      }
+      return null;
+    }
+    function isClosed(p) { return p.length > 2 && dist(p[0], p[p.length - 1]) < TOL * 2; }
+    for (i = 0; i < segs.length; i++) {
+      if (used[i]) continue; used[i] = 1;
+      var pts = segs[i].slice(), f;
+      while (!isClosed(pts) && (f = find(pts[pts.length - 1]))) {
+        used[f[0]] = 1; var s = segs[f[0]]; s = f[1] ? s.slice().reverse() : s; pts = pts.concat(s.slice(1));
+      }
+      while (!isClosed(pts) && (f = find(pts[0]))) {
+        used[f[0]] = 1; var s2 = segs[f[0]]; s2 = f[1] ? s2 : s2.slice().reverse(); pts = s2.slice(0, -1).concat(pts);
+      }
+      (isClosed(pts) ? closed : open).push(pts);
+    }
+    return { closed: closed, open: open };
+  }
+  function area(p) { var s = 0; for (var i = 0, n = p.length; i < n; i++) { var a = p[i], b = p[(i + 1) % n]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; }
+  function inside(pt, poly) {
+    var c = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var a = poly[i], b = poly[j];
+      if ((a[1] > pt[1]) !== (b[1] > pt[1]) && pt[0] < (b[0] - a[0]) * (pt[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c;
+    }
+    return c;
+  }
+  function hull(pts) {
+    var p = pts.slice().sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    if (p.length < 3) return p;
+    function cr(o, a, b) { return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]); }
+    var lo = [], up = [], i;
+    for (i = 0; i < p.length; i++) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p[i]) <= 0) lo.pop(); lo.push(p[i]); }
+    for (i = p.length - 1; i >= 0; i--) { while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p[i]) <= 0) up.pop(); up.push(p[i]); }
+    lo.pop(); up.pop(); return lo.concat(up);
+  }
+  function extent(h, ang) {
+    var c = Math.cos(ang), s = Math.sin(ang), u0 = 1e99, u1 = -1e99, v0 = 1e99, v1 = -1e99;
+    for (var i = 0; i < h.length; i++) { var u = h[i][0] * c + h[i][1] * s, v = -h[i][0] * s + h[i][1] * c; if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v; }
+    return [u1 - u0, v1 - v0];
+  }
+  function minRect(h) {
+    var ax = extent(h, 0), best = ax, rot = 0;
+    for (var i = 0; i < h.length; i++) {
+      var a = h[i], b = h[(i + 1) % h.length], e = extent(h, Math.atan2(b[1] - a[1], b[0] - a[0]));
+      if (e[0] * e[1] < best[0] * best[1] * 0.999) { best = e; rot = 1; }
+    }
+    return { w: Math.max(best[0], best[1]), h: Math.min(best[0], best[1]), rotated: rot && best !== ax };
+  }
+
+  function analyze(pieces, roles) {
+    var cut = [], bend = [];
+    pieces.forEach(function (p) { var r = roles[p.layer]; if (r === 'cut') cut.push(p); else if (r === 'bend') bend.push(p); });
+    var g = { cutLen: 0, pierces: 0, area: 0, w: 0, h: 0, bends: 0, open: 0, bodies: 0, loops: [], openPaths: [], bendPaths: bend.map(function (p) { return p.pts; }) };
+    if (!cut.length) return g;
+    cut.forEach(function (p) { g.cutLen += p.len; });
+    var ch = chain(cut);
+    g.loops = ch.closed; g.openPaths = ch.open; g.open = ch.open.length; g.pierces = ch.closed.length + ch.open.length;
+    var ar = ch.closed.map(function (l) { return Math.abs(area(l)); });
+    ch.closed.forEach(function (l, i) {
+      var d = 0;
+      for (var j = 0; j < ch.closed.length; j++) if (j !== i && ar[j] > ar[i] && inside(l[0], ch.closed[j])) d++;
+      g.area += (d % 2 ? -1 : 1) * ar[i]; if (d === 0) g.bodies++;
+    });
+    var all = []; ch.closed.concat(ch.open).forEach(function (l) { for (var i = 0; i < l.length; i++) all.push(l[i]); });
+    var x0 = 1e99, x1 = -1e99, y0 = 1e99, y1 = -1e99;
+    all.forEach(function (p) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; });
+    g.box = [x0, y0, x1, y1];
+    var mr = minRect(hull(all)); g.w = mr.w; g.h = mr.h; g.rotated = mr.rotated;
+    var keys = {};
+    bend.forEach(function (p) {
+      var a = p.pts[0], b = p.pts[p.pts.length - 1], ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+      if (ang < 0) ang += Math.PI; if (ang >= Math.PI - 0.004) ang = 0;
+      var off = -a[0] * Math.sin(ang) + a[1] * Math.cos(ang);
+      keys[Math.round(ang * 180 / Math.PI * 2) + '|' + Math.round(off * 2)] = 1;
+    });
+    g.bends = Object.keys(keys).length;
+    return g;
+  }
+
+  /* ---------- nesting (shelf packing of bounding rectangles) ---------- */
+  function pack(items, W, L, gap, border, strat, swapped) {
+    var Wu = W - 2 * border + gap, Lu = L - 2 * border + gap, rects = [], unfit = [], E = 1e-6;
+    items.forEach(function (it) {
+      var s = Math.min(it.w, it.h) + gap, l = Math.max(it.w, it.h) + gap, o = [];
+      if (l <= Wu + E && s <= Lu + E) o.push([l, s]);
+      if (s <= Wu + E && l <= Lu + E) o.push([s, l]);
+      if (!o.length) { unfit.push(it.id); return; }
+      var c = strat === 0 ? o[0] : o[o.length - 1];
+      for (var q = 0; q < it.qty; q++) rects.push({ id: it.id, a: c[0], b: c[1] });
+    });
+    rects.sort(function (p, q) { return q.b - p.b || q.a - p.a; });
+    var sheets = [];
+    rects.forEach(function (r) {
+      for (var i = 0; i <= sheets.length; i++) {
+        if (i === sheets.length) sheets.push({ shelves: [], used: 0, pl: [] });
+        var sh = sheets[i], sf = null;
+        for (var k = 0; k < sh.shelves.length; k++) {
+          var c = sh.shelves[k];
+          if (c.h >= r.b - E && c.x + r.a <= Wu + E) { sf = c; break; }
+          if (c.h >= r.a - E && c.x + r.b <= Wu + E) { sf = c; var tmp = r.a; r.a = r.b; r.b = tmp; break; }
+        }
+        if (!sf && sh.used + r.b <= Lu + E) { sf = { y: sh.used, h: r.b, x: 0 }; sh.shelves.push(sf); sh.used += r.b; }
+        if (sf) { sh.pl.push({ id: r.id, x: border + sf.x, y: border + sf.y, a: r.a - gap, b: r.b - gap }); sf.x += r.a; return; }
+      }
+    });
+    sheets.forEach(function (s) { s.usedLen = s.used - gap + 2 * border; });
+    return { W: W, L: L, gap: gap, border: border, swapped: swapped, sheets: sheets, unfit: unfit };
+  }
+  function chargedArea(lay, mode, minRem) {
+    var a = 0, n = lay.sheets.length;
+    lay.sheets.forEach(function (s, i) {
+      s.charged = lay.L; s.notch = null;
+      if (mode === 'remnant' && i === n - 1) {
+        var strip = lay.L - s.usedLen >= minRem;
+        if (strip) s.charged = s.usedLen;
+        var sf = s.shelves[s.shelves.length - 1], uw = sf.x - lay.gap + 2 * lay.border, free = lay.W - uw;
+        if (free >= minRem && (strip || sf.h >= minRem)) s.notch = { x: uw, y: lay.border + sf.y, w: free, h: s.charged - (lay.border + sf.y) };
+      }
+      a += lay.W * s.charged - (s.notch ? s.notch.w * s.notch.h : 0);
+    });
+    return a;
+  }
+  function nest(items, W, L, gap, border, mode, minRem) {
+    var best = null;
+    [[W, L, false], [L, W, true]].forEach(function (d) {
+      [0, 1].forEach(function (st) {
+        var lay = pack(items, d[0], d[1], gap, border, st, d[2]); lay.area = chargedArea(lay, mode, minRem);
+        if (!best || lay.unfit.length < best.unfit.length || (lay.unfit.length === best.unfit.length && lay.area < best.area - 1)) best = lay;
+      });
+    });
+    return best;
+  }
+
+  /* ---------- cost model ---------- */
+  function interp(xs, ys, x) {
+    if (x <= xs[0]) return ys[0];
+    for (var i = 1; i < xs.length; i++) if (x <= xs[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * (x - xs[i - 1]) / (xs[i] - xs[i - 1]);
+    return ys[ys.length - 1];
+  }
+  function zoneOf(cfg, t) { for (var i = 0; i < cfg.zones.length; i++) if (t <= cfg.zones[i]) return i; return cfg.zones.length; }
+  function catOf(cfg, side, kg) { for (var i = 0; i < cfg.cats.length; i++) if (side <= cfg.cats[i][0] && kg <= cfg.cats[i][1]) return i; return cfg.cats.length; }
+
+  function quote(parts, cfg) {
+    var res = { parts: {}, groups: [], total: 0, cost: 0, netKg: 0, chargedKg: 0 }, groups = {};
+    parts.forEach(function (p) { if (p.geom.area > 0 && p.qty > 0 && p.t > 0) { var k = p.mat + '|' + p.t; (groups[k] = groups[k] || []).push(p); } });
+    Object.keys(groups).forEach(function (k) {
+      var ps = groups[k], mat = cfg.materials[ps[0].mat], t = ps[0].t, gap = cfg.gap;
+      var items = ps.map(function (p) { return { id: p.id, w: p.geom.w, h: p.geom.h, qty: p.qty }; });
+      var foot = {}, sumFit = 0, lay = null, sheetArea = 0, unfit = {};
+      ps.forEach(function (p) { foot[p.id] = (p.geom.w + gap) * (p.geom.h + gap) * p.qty; });
+      if (cfg.scrapMode !== 'bbox') {
+        lay = nest(items, cfg.sheetW, cfg.sheetL, gap, cfg.border, cfg.scrapMode, cfg.minRem);
+        lay.unfit.forEach(function (id) { unfit[id] = 1; }); sheetArea = lay.area;
+      }
+      ps.forEach(function (p) { if (!unfit[p.id]) sumFit += foot[p.id]; });
+      var g = { key: k, mat: mat.name, t: t, layout: lay, netKg: 0, chargedKg: 0, ids: ps.map(function (p) { return p.id; }) };
+      var z = zoneOf(cfg, t), kgmm3 = mat.rho / 1e6;
+      ps.forEach(function (p) {
+        var q = p.qty, ge = p.geom, share = lay && !unfit[p.id] ? foot[p.id] / sumFit : 0;
+        var chArea = lay && !unfit[p.id] ? sheetArea * share : foot[p.id];
+        var netKg = ge.area * t * kgmm3, chKg = Math.max(chArea * t * kgmm3 / q, netKg);
+        var r = { netKg: netKg, chargedKg: chKg, scrap: 1 - netKg / chKg, unfit: !!unfit[p.id], zone: z };
+        r.cat = catOf(cfg, ge.w, netKg);
+        r.material = chKg * mat.price - (chKg - netKg) * mat.scrap;
+        var sheetMin = lay ? cfg.sheetChangeMin * lay.sheets.length * share / q : 0;
+        r.cutMin = ge.cutLen / 1000 / interp(cfg.cutT, cfg.cutSpeed[mat.group], t);
+        r.pierceMin = ge.pierces * interp(cfg.cutT, cfg.pierceS, t) / 60;
+        r.laser = (r.cutMin + r.pierceMin + sheetMin) * cfg.rates.laser / 60;
+        r.bend = p.bends > 0 ? (p.bends * cfg.bendMin[r.cat][z] + cfg.bendSetupMin / q) * cfg.rates.bend / 60 : 0;
+        r.thread = p.thrN > 0 ? p.thrN * cfg.thrMin[p.thrSize][z] * cfg.rates.drill / 60 : 0;
+        r.mill = p.milN > 0 ? p.milN * cfg.milMin[p.milKind][z] * cfg.rates.drill / 60 : 0;
+        r.weld = p.weldMm > 0 ? Math.max(p.weldMm / 1000 * cfg.weldEur[p.weldM][z], cfg.weldMinEur) : 0;
+        r.tack = (p.tacks || 0) * cfg.tackEur;
+        r.other = (p.other || 0) + cfg.setupEur / q;
+        r.cost = r.material + r.laser + r.bend + r.thread + r.mill + r.weld + r.tack + r.other;
+        r.price = r.cost * (1 + cfg.margin / 100); r.line = r.price * q;
+        res.parts[p.id] = r; res.total += r.line; res.cost += r.cost * q;
+        g.netKg += netKg * q; g.chargedKg += chKg * q;
+      });
+      g.scrap = 1 - g.netKg / g.chargedKg; res.netKg += g.netKg; res.chargedKg += g.chargedKg; res.groups.push(g);
+    });
+    res.scrap = res.chargedKg ? 1 - res.netKg / res.chargedKg : 0;
+    return res;
+  }
+
+  function defaults() {
+    return {
+      rates: { laser: 90, bend: 55, drill: 40 },
+      materials: [
+        { name: 'S235JR', group: 0, rho: 7.85, price: 0.95, scrap: 0.20 },
+        { name: 'DC01', group: 0, rho: 7.85, price: 1.05, scrap: 0.20 },
+        { name: 'AISI 304', group: 1, rho: 7.90, price: 3.60, scrap: 0.90 },
+        { name: 'AISI 316', group: 1, rho: 7.98, price: 5.20, scrap: 1.20 },
+        { name: 'AlMg3 (5754)', group: 2, rho: 2.66, price: 4.20, scrap: 1.00 }
+      ],
+      cutT: [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20],
+      cutSpeed: [
+        [28, 14, 7.5, 4.8, 3.6, 3.0, 2.2, 1.6, 1.2, 0.9, 0.6],
+        [30, 14, 7.0, 4.5, 3.0, 2.2, 1.4, 1.0, 0.7, 0.45, 0.25],
+        [30, 15, 8.0, 5.0, 3.5, 2.6, 1.6, 1.1, 0.8, 0.5, 0.3]
+      ],
+      pierceS: [0.3, 0.4, 0.6, 0.8, 1, 1.2, 2, 3, 4, 6, 10],
+      zones: [2, 4, 6, 10],
+      cats: [[500, 5], [1200, 15], [2500, 40]],
+      bendMin: [[0.25, 0.3, 0.35, 0.45, 0.6], [0.4, 0.45, 0.55, 0.7, 0.9], [0.7, 0.8, 1.0, 1.3, 1.6], [1.2, 1.4, 1.7, 2.2, 2.8]],
+      bendSetupMin: 10,
+      thrSizes: ['M4', 'M5', 'M6', 'M8', 'M10', 'M12', 'M16'],
+      thrMin: [[0.3, 0.35, 0.4, 0.5, 0.6], [0.3, 0.35, 0.4, 0.5, 0.6], [0.35, 0.4, 0.45, 0.55, 0.7], [0.4, 0.45, 0.5, 0.65, 0.8], [0.5, 0.55, 0.6, 0.75, 0.95], [0.6, 0.65, 0.75, 0.9, 1.1], [0.8, 0.85, 0.95, 1.15, 1.4]],
+      milMin: [[0.4, 0.5, 0.6, 0.8, 1.0], [0.7, 0.9, 1.1, 1.4, 1.8], [1.2, 1.5, 1.9, 2.4, 3.0], [0.3, 0.35, 0.4, 0.5, 0.6]],
+      weldEur: [[14, 18, 24, 32, 42], [8, 10, 14, 19, 26]],
+      weldMinEur: 3, tackEur: 0.5, setupEur: 15, margin: 20,
+      sheetW: 1500, sheetL: 3000, gap: 8, border: 10, minRem: 300, scrapMode: 'remnant', sheetChangeMin: 4
+    };
+  }
+
+  /* ---------- sample parts ---------- */
+  function dxfOf(ents) {
+    var s = '0\nSECTION\n2\nENTITIES\n';
+    ents.forEach(function (e) {
+      s += '0\n' + e[0] + '\n8\n' + e[1] + '\n';
+      var c = e[0] === 'LINE' ? [10, 20, 11, 21] : e[0] === 'CIRCLE' ? [10, 20, 40] : [10, 20, 40, 50, 51];
+      for (var i = 0; i < c.length; i++) s += c[i] + '\n' + e[2 + i] + '\n';
+    });
+    return s + '0\nENDSEC\n0\nEOF\n';
+  }
+  function sampleBracket() {
+    var W = 320, H = 160, r = 10, e = [], C = 'CUT';
+    e.push(['LINE', C, r, 0, W - r, 0], ['LINE', C, W, r, W, H - r], ['LINE', C, W - r, H, r, H], ['LINE', C, 0, H - r, 0, r]);
+    e.push(['ARC', C, W - r, r, r, 270, 360], ['ARC', C, W - r, H - r, r, 0, 90], ['ARC', C, r, H - r, r, 90, 180], ['ARC', C, r, r, r, 180, 270]);
+    [[25, 25], [W - 25, 25], [W - 25, H - 25], [25, H - 25]].forEach(function (p) { e.push(['CIRCLE', C, p[0], p[1], 4.5]); });
+    e.push(['LINE', C, 130, 74, 190, 74], ['LINE', C, 190, 86, 130, 86], ['ARC', C, 190, 80, 6, 270, 90], ['ARC', C, 130, 80, 6, 90, 270]);
+    e.push(['LINE', 'BEND', 60, 0, 60, H], ['LINE', 'BEND', W - 60, 0, W - 60, H]);
+    return dxfOf(e);
+  }
+  function sampleFlange() {
+    var e = [['CIRCLE', 'CUT', 0, 0, 110], ['CIRCLE', 'CUT', 0, 0, 60]];
+    for (var i = 0; i < 6; i++) e.push(['CIRCLE', 'CUT', +(85 * Math.cos(i * Math.PI / 3)).toFixed(4), +(85 * Math.sin(i * Math.PI / 3)).toFixed(4), 5.5]);
+    return dxfOf(e);
+  }
+
+  G.LQ = { chain: chain, area: area, inside: inside, hull: hull, minRect: minRect, readDXF: readDXF, defaultRole: defaultRole, analyze: analyze, nest: nest, quote: quote, defaults: defaults, sampleBracket: sampleBracket, sampleFlange: sampleFlange, zoneOf: zoneOf };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function (G) {
+  'use strict';
+  var Q = G.LQ, EPS = 0.15, RAD = Math.PI / 180;
+
+  /* ---------- polygons ---------- */
+  function rdp(pts, tol) {
+    if (pts.length < 4) return pts.slice();
+    var keep = new Uint8Array(pts.length), st = [[0, pts.length - 1]]; keep[0] = keep[pts.length - 1] = 1;
+    while (st.length) {
+      var s = st.pop(), a = pts[s[0]], b = pts[s[1]], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, md = 0, mi = -1;
+      for (var i = s[0] + 1; i < s[1]; i++) { var d = Math.abs((pts[i][0] - a[0]) * dy - (pts[i][1] - a[1]) * dx) / l; if (d > md) { md = d; mi = i; } }
+      if (md > tol) { keep[mi] = 1; st.push([s[0], mi], [mi, s[1]]); }
+    }
+    return pts.filter(function (p, i) { return keep[i]; });
+  }
+  function bbox(p) { var b = [1e99, 1e99, -1e99, -1e99]; for (var i = 0; i < p.length; i++) { var q = p[i]; if (q[0] < b[0]) b[0] = q[0]; if (q[1] < b[1]) b[1] = q[1]; if (q[0] > b[2]) b[2] = q[0]; if (q[1] > b[3]) b[3] = q[1]; } return b; }
+  function profileFromDXF(text) {
+    var d = Q.readDXF(text), ch = Q.chain(d.pieces);
+    if (!ch.closed.length) throw new Error('noprofile');
+    var best = ch.closed[0], ba = 0;
+    ch.closed.forEach(function (l) { var a = Math.abs(Q.area(l)); if (a > ba) { ba = a; best = l; } });
+    var p = best.slice(); if (Math.hypot(p[0][0] - p[p.length - 1][0], p[0][1] - p[p.length - 1][1]) < 0.01) p.pop();
+    var far = 0, fd = -1; p.forEach(function (q, i) { var dd = Math.hypot(q[0] - p[0][0], q[1] - p[0][1]); if (dd > fd) { fd = dd; far = i; } });
+    return rdp(p.slice(0, far + 1), 0.02).slice(0, -1).concat(rdp(p.slice(far).concat([p[0]]), 0.02).slice(0, -1));
+  }
+  function normPunch(pts) {
+    var b = bbox(pts), sx = 0, n = 0;
+    pts.forEach(function (p) { if (p[1] <= b[1] + 0.05) { sx += p[0]; n++; } });
+    var cx = sx / n; return { pts: pts.map(function (p) { return [+(p[0] - cx).toFixed(3), +(p[1] - b[1]).toFixed(3)]; }), height: +(b[3] - b[1]).toFixed(1) };
+  }
+  function topAt(pts, x) {
+    var y = -1e99;
+    for (var i = 0, n = pts.length; i < n; i++) { var a = pts[i], c = pts[(i + 1) % n]; if ((a[0] <= x && c[0] >= x) || (c[0] <= x && a[0] >= x)) { var yy = a[0] === c[0] ? Math.max(a[1], c[1]) : a[1] + (c[1] - a[1]) * (x - a[0]) / (c[0] - a[0]); if (yy > y) y = yy; } }
+    return y;
+  }
+  function normDie(pts) {
+    var b = bbox(pts), dx = 0.1, run = null, best = null, seenTop = false;
+    for (var x = b[0] + dx / 2; x < b[2]; x += dx) {
+      var top = topAt(pts, x) >= b[3] - 0.05;
+      if (top) { if (run && seenTop && (!best || run[1] - run[0] > best[1] - best[0])) best = run; run = null; seenTop = true; }
+      else if (seenTop) { if (!run) run = [x - dx / 2, x + dx / 2]; else run[1] = x + dx / 2; }
+    }
+    var cx = best ? (best[0] + best[1]) / 2 : (b[0] + b[2]) / 2;
+    return { pts: pts.map(function (p) { return [+(p[0] - cx).toFixed(3), +(p[1] - b[3]).toFixed(3)]; }), V: best ? Math.round(best[1] - best[0]) : 0, height: +(b[3] - b[1]).toFixed(1) };
+  }
+
+  function notches(pts) {
+    var b = bbox(pts), dx = 0.1, run = null, out = [], seenTop = false;
+    for (var x = b[0] + dx / 2; x < b[2]; x += dx) {
+      var top = topAt(pts, x) >= b[3] - 0.05;
+      if (top) { if (run && seenTop && run[1] - run[0] >= 2) out.push(run); run = null; seenTop = true; }
+      else if (seenTop) { if (!run) run = [x - dx / 2, x + dx / 2]; else run[1] = x + dx / 2; }
+    }
+    return out;
+  }
+  /* every V a die offers: each notch on each of its four faces */
+  function dieVariants(die) {
+    var out = [], pts = die.pts;
+    for (var k = 0; k < 4; k++) {
+      var b = bbox(pts);
+      notches(pts).forEach(function (r, i) {
+        var cx = (r[0] + r[1]) / 2, key = k + ':' + i, det = Math.round(r[1] - r[0]), nom = die.vnom && die.vnom[key];
+        var home = k === 0 && Math.abs(cx) < 0.6;
+        out.push({ key: key, rot: k * 90, det: det, V: nom > 0 ? nom : home && die.V > 0 ? die.V : det, home: home, use: die.vuse && key in die.vuse ? !!die.vuse[key] : k === 0,
+          pts: pts.map(function (q) { return [+(q[0] - cx).toFixed(3), +(q[1] - b[3]).toFixed(3)]; }) });
+      });
+      pts = pts.map(function (q) { return [-q[1], q[0]]; });
+    }
+    if (!out.length) out.push({ key: '0:0', rot: 0, det: 0, V: die.V || 0, home: true, use: true, pts: die.pts });
+    return out;
+  }
+  /* side walls: bends of group `oi`, already made, standing at the ends of each bend of group `gi` */
+  function walls(groups, gi, oi, t, r, K) {
+    var g = groups[gi], o = groups[oi], dg = [Math.cos(g.ang), Math.sin(g.ang)], ng = [-dg[1], dg[0]], dO = [Math.cos(o.ang), Math.sin(o.ang)], nO = [-dO[1], dO[0]];
+    var c = nO[0] * dg[0] + nO[1] * dg[1], e = ng[0] * dO[0] + ng[1] * dO[1]; if (Math.abs(c) < 0.95) return null;
+    return g.bends.map(function (b) {
+      var posB = b.off * e, res = { Lb: b.len, L: null, R: null, Wi: null }, m = c * (b.s0 + b.s1) / 2;
+      o.bends.forEach(function (w, wi) {
+        if (posB < w.s0 - 15 || posB > w.s1 + 15) return;
+        var sw = w.off * c, isL = Math.abs(sw - b.s0) <= 12 && sw <= b.s0 + 1, isR = Math.abs(sw - b.s1) <= 12 && sw >= b.s1 - 1; if (!isL && !isR) return;
+        var wall = { s: sw, h: m > w.off ? o.legs[wi] : o.legs[wi + 1], dir: w.dir }; if (isL) res.L = wall; else res.R = wall;
+      });
+      if (res.L && res.R) res.Wi = res.R.s - res.L.s - Math.PI / 2 * (r + K * t) + 2 * r;
+      return res;
+    });
+  }
+  function parseSegs(txt, length) {
+    var out = []; String(txt || '').split(/[,;\s]+/).forEach(function (s) { var m = /^(\d+(?:[.,]\d+)?)(?:\s*[x×*]\s*(\d+))?$/i.exec(s.trim()); if (!m) return; var l = parseFloat(m[1].replace(',', '.')), n = Math.min(parseInt(m[2] || '1', 10), 40); for (var i = 0; i < n && l > 0; i++) out.push(l); });
+    if (!out.length && length > 0) out.push(length);
+    return out;
+  }
+  function bestSum(segs, hi) {
+    var U = 2, cap = Math.floor(hi * U + 1e-6); if (cap < 0) return 0; var ok = new Uint8Array(cap + 1); ok[0] = 1;
+    segs.forEach(function (l) { var w = Math.round(l * U); for (var s = cap; s >= w; s--) if (ok[s - w]) ok[s] = 1; });
+    for (var s = cap; s >= 0; s--) if (ok[s]) return s / U; return 0;
+  }
+
+  /* ---------- demo tools ---------- */
+  function tipArc(R, half) { var o = []; for (var k = -4; k <= 4; k++) { var a = (90 - half) * RAD * k / 4; o.push([R * Math.sin(a), R - R * Math.cos(a)]); } return o; }
+  function straightPunch() {
+    var tip = tipArc(0.8, 44), e = tip[tip.length - 1], fy = e[1] + (10 - e[0]) / Math.tan(44 * RAD);
+    var p = tip.concat([[10, fy], [10, 70], [6.5, 70], [6.5, 100], [-6.5, 100], [-6.5, 70], [-10, 70], [-10, fy]]);
+    return { id: 'p-straight', name: 'Punzone dritto 88° R0.8', kind: 'punch', pts: p, angle: 88, radius: 0.8, maxLoad: 1000, length: 3000, sample: true };
+  }
+  function goosePunch() {
+    var tip = tipArc(0.8, 44), e = tip[tip.length - 1];
+    var p = tip.concat([[6, e[1] + (6 - e[0]) / Math.tan(44 * RAD)], [16, 22], [16, 105], [6.5, 105], [6.5, 135], [-6.5, 135], [-6.5, 105], [-16, 105], [-16, 92], [3, 72], [3, 30], [-5, 16], [-5, -e[0] > -5 ? e[1] + (5 - e[0]) / Math.tan(44 * RAD) : 5]]);
+    return { id: 'p-goose', name: 'Punzone a collo d\'oca 88° R0.8', kind: 'punch', pts: p, angle: 88, radius: 0.8, maxLoad: 500, length: 3000, sample: true };
+  }
+  function vDie(V) {
+    var W = Math.max(V + 24, 40), d = V / 2 / Math.tan(44 * RAD), H = Math.max(60, d + 30);
+    return { id: 'd-v' + V, name: 'Matrice V' + V + ' 88°', kind: 'die', pts: [[-W / 2, 0], [-V / 2, 0], [0, -d], [V / 2, 0], [W / 2, 0], [W / 2, -H], [-W / 2, -H]].map(function (p) { return [+p[0].toFixed(3), +p[1].toFixed(3)]; }), V: V, angle: 88, maxLoad: 1000, length: 3000, tMin: +(V / 12).toFixed(1), tMax: +(V / 6).toFixed(1), sample: true };
+  }
+  function demoLib() {
+    var m1 = { id: 'm-100', name: 'Pressa 100 t × 3000', kind: 'machine', tons: 100, length: 3000, open: 400, clamp: 'Promecam', ramW: 60, hW: 30, hH: 80, tableW: 90, gMin: 8, gMax: 600, sample: true }, m2 = { id: 'm-40', name: 'Pressa 40 t × 1250', kind: 'machine', tons: 40, length: 1250, open: 300, clamp: 'Promecam', sample: true };
+    var t = [straightPunch(), goosePunch(), vDie(8), vDie(12), vDie(16), vDie(25)];
+    t.forEach(function (x) { x.fits = ['m-100']; }); t[0].fits.push('m-40'); t[2].fits.push('m-40'); t[3].fits.push('m-40'); t[0].length = t[2].length = t[3].length = 3000;
+    return [m1, m2].concat(t);
+  }
+
+  /* ---------- part ---------- */
+  function partFromFlat(pieces, roles) {
+    var cut = [], groups = {};
+    pieces.forEach(function (p) {
+      var r = roles[p.layer];
+      if (r === 'cut') { p.pts.forEach(function (q) { cut.push(q); }); return; } if (r !== 'bend') return;
+      var a = p.pts[0], b = p.pts[p.pts.length - 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]); if (len < 1e-6) return;
+      var ang = Math.atan2(b[1] - a[1], b[0] - a[0]); if (ang < 0) ang += Math.PI; if (ang >= Math.PI - 0.004) ang = 0;
+      var key = Math.round(ang / RAD * 2), g = groups[key] = groups[key] || { ang: ang, lines: {} };
+      var off = -a[0] * Math.sin(ang) + a[1] * Math.cos(ang), k = Math.round(off * 2), L = g.lines[k] = g.lines[k] || { off: off, len: 0, down: 0, n: 0, s0: 1e99, s1: -1e99 };
+      var ca = Math.cos(ang), sa = Math.sin(ang), d0 = a[0] * ca + a[1] * sa, d1 = b[0] * ca + b[1] * sa; L.s0 = Math.min(L.s0, d0, d1); L.s1 = Math.max(L.s1, d0, d1);
+      L.len += len; L.n++; if (/down|gi[uù]|κατω|κάτω/i.test(p.layer)) L.down++;
+    });
+    return Object.keys(groups).map(function (k) {
+      var g = groups[k], s = Math.sin(g.ang), c = Math.cos(g.ang), lo = 1e99, hi = -1e99;
+      cut.forEach(function (q) { var u = -q[0] * s + q[1] * c; if (u < lo) lo = u; if (u > hi) hi = u; });
+      var lines = Object.keys(g.lines).map(function (x) { return g.lines[x]; }).sort(function (a, b) { return a.off - b.off; }), legs = [], prev = lo;
+      lines.forEach(function (l) { legs.push(+(l.off - prev).toFixed(2)); prev = l.off; }); legs.push(+(hi - prev).toFixed(2));
+      return { angDeg: +(g.ang / RAD).toFixed(1), ang: g.ang, legs: legs, bends: lines.map(function (l) { return { gamma: 90, dir: l.down * 2 > l.n ? -1 : 1, len: +l.len.toFixed(1), off: l.off, s0: l.s0, s1: l.s1 }; }) };
+    }).sort(function (a, b) { return b.bends.length - a.bends.length; });
+  }
+  function bendAllowance(A, t, r, K) { return A * (r + K * t); }
+  function bendDeduction(A, t, r, K) { return 2 * (r + t) * Math.tan(A / 2) - bendAllowance(A, t, r, K); }
+  function flatLegs(out, bends, t, r, K) {
+    return out.map(function (o, i) {
+      var f = o; [i - 1, i].forEach(function (j) { if (j >= 0 && j < bends.length) f -= bendDeduction((180 - bends[j].gamma) * RAD, t, r, K) / 2; });
+      return f;
+    });
+  }
+  function build(legs, ang, sgn, t, r, K) {
+    var n = ang.length, pos = [0, 0], h = 0, cl = [[0, 0]], hd = [0], bends = [], straight = [], rho = r + t / 2;
+    for (var i = 0; i <= n; i++) {
+      var s = legs[i] - (i > 0 ? Math.abs(ang[i - 1]) * (r + K * t) / 2 : 0) - (i < n ? Math.abs(ang[i]) * (r + K * t) / 2 : 0);
+      straight.push(s); if (s < 0.01) s = 0.01;
+      pos = [pos[0] + s * Math.cos(h), pos[1] + s * Math.sin(h)]; cl.push(pos); hd.push(h);
+      if (i < n) {
+        var a = ang[i], sg = sgn[i], C = [pos[0] - sg * rho * Math.sin(h), pos[1] + sg * rho * Math.cos(h)], m = a ? Math.max(2, Math.ceil(Math.abs(a) / (6 * RAD))) : 0;
+        bends.push({ C: C, sg: sg, hm: h + a / 2, a: a });
+        for (var j = 1; j <= m; j++) { var hh = h + a * j / m; pos = [C[0] + sg * rho * Math.sin(hh), C[1] - sg * rho * Math.cos(hh)]; cl.push(pos); hd.push(hh); }
+        h += a;
+      }
+    }
+    var Lp = [], Rp = [], o = t / 2 - EPS;
+    cl.forEach(function (p, k) { var nx = -Math.sin(hd[k]), ny = Math.cos(hd[k]); Lp.push([p[0] + nx * o, p[1] + ny * o]); Rp.push([p[0] - nx * o, p[1] - ny * o]); });
+    return { poly: Lp.concat(Rp.reverse()), bends: bends, straight: straight };
+  }
+  function crossPt(a, b, c, d) {
+    var r0 = b[0] - a[0], r1 = b[1] - a[1], s0 = d[0] - c[0], s1 = d[1] - c[1], den = r0 * s1 - r1 * s0; if (Math.abs(den) < 1e-12) return null;
+    var u = ((c[0] - a[0]) * s1 - (c[1] - a[1]) * s0) / den, v = ((c[0] - a[0]) * r1 - (c[1] - a[1]) * r0) / den;
+    return u >= 0 && u <= 1 && v >= 0 && v <= 1 ? [a[0] + u * r0, a[1] + u * r1] : null;
+  }
+  function hit(A, B) {
+    var ba = bbox(A), bb = bbox(B); if (ba[0] > bb[2] || bb[0] > ba[2] || ba[1] > bb[3] || bb[1] > ba[3]) return null;
+    for (var i = 0, n = A.length; i < n; i++) {
+      var a = A[i], b = A[(i + 1) % n];
+      if (Math.max(a[0], b[0]) < bb[0] || Math.min(a[0], b[0]) > bb[2] || Math.max(a[1], b[1]) < bb[1] || Math.min(a[1], b[1]) > bb[3]) continue;
+      for (var j = 0, m = B.length; j < m; j++) {
+        var c = B[j], d = B[(j + 1) % m];
+        if (Math.max(c[0], d[0]) < Math.min(a[0], b[0]) || Math.min(c[0], d[0]) > Math.max(a[0], b[0]) || Math.max(c[1], d[1]) < Math.min(a[1], b[1]) || Math.min(c[1], d[1]) > Math.max(a[1], b[1])) continue;
+        var x = crossPt(a, b, c, d); if (x) return x;
+      }
+    }
+    if (Q.inside(A[0], B)) return A[0]; if (Q.inside(B[0], A)) return B[0];
+    return null;
+  }
+  /* place the part for bend k at angle `ang[k]`, seat it on the die and the punch on it */
+  function stage(S, k, ang, mirror) {
+    var b = build(S.legs, ang, S.sgn, S.t, S.r, S.K), B = b.bends[k], phi = Math.abs(ang[k]) / 2, t = S.t, r = S.r;
+    var nin = [-B.sg * Math.sin(B.hm), B.sg * Math.cos(B.hm)], M = [B.C[0] - nin[0] * (r + t) / Math.cos(phi), B.C[1] - nin[1] * (r + t) / Math.cos(phi)];
+    var rot = Math.PI / 2 - Math.atan2(nin[1], nin[0]), cs = Math.cos(rot), sn = Math.sin(rot), mx = mirror ? -1 : 1;
+    var ossb = (r + t) * Math.tan(phi), rb = (Math.max(b.straight[k], 0) + ossb) * Math.cos(phi), ra = (Math.max(b.straight[k + 1], 0) + ossb) * Math.cos(phi);
+    var leftIsBefore = (B.sg > 0) !== !!mirror, reachL = leftIsBefore ? rb : ra, reachR = leftIsBefore ? ra : rb, tp = Math.tan(phi), y0 = -1e99;
+    S.die.pts.forEach(function (v) { if (v[0] > 0.01 && v[0] <= reachR + 1e-6) y0 = Math.max(y0, v[1] - v[0] * tp); else if (v[0] < -0.01 && -v[0] <= reachL + 1e-6) y0 = Math.max(y0, v[1] + v[0] * tp); });
+    var sunk = y0 < -1e98; if (sunk) y0 = 0;
+    var poly = b.poly.map(function (p) { var x = p[0] - M[0], y = p[1] - M[1]; return [mx * (x * cs - y * sn), x * sn + y * cs + y0]; });
+    var yc = y0 + (r + t) / Math.cos(phi), xs = r * Math.sin(phi), base = yc - r, yp = base, zone = Math.max(3, S.die.V / 2);
+    S.punch.pts.forEach(function (v) {
+      var ax = Math.abs(v[0]); if (v[1] > zone || ax > Math.min(reachL, reachR)) return;
+      var s = ax <= xs ? yc - Math.sqrt(r * r - ax * ax) : yc - r * Math.cos(phi) + (ax - xs) * tp; if (s - v[1] > yp) yp = s - v[1];
+    });
+    var punch = S.punch.pts.map(function (v) { return [v[0], v[1] + yp]; });
+    var E = S.env || {}, env = [], ptop = -1e99, dbot = 1e99, hitR = null, hitT = null;
+    punch.forEach(function (v) { if (v[1] > ptop) ptop = v[1]; }); S.die.pts.forEach(function (v) { if (v[1] < dbot) dbot = v[1]; });
+    function rect(w, y0, y1) { return [[-w / 2, y0], [w / 2, y0], [w / 2, y1], [-w / 2, y1]]; }
+    if (E.hW > 0 && E.hH > 0) { var hp = rect(E.hW, ptop, ptop + E.hH); env.push(hp); hitR = hit(poly, hp); }
+    if (E.ramW > 0) { var rp = rect(E.ramW, ptop + (E.hH > 0 && E.hW > 0 ? E.hH : 0), ptop + (E.hH || 0) + 250); env.push(rp); hitR = hitR || hit(poly, rp); }
+    if (E.tableW > 0) { var tb = rect(E.tableW, dbot - 250, dbot); env.push(tb); hitT = hit(poly, tb); }
+    return { part: poly, punch: punch, die: S.die.pts, env: env, y0: y0, lift: yp - base, sunk: sunk, hitP: hit(poly, punch), hitD: hit(poly, S.die.pts), hitR: hitR, hitT: hitT };
+  }
+  /* back gauge: distance from the bend line to the rearmost point of the part at sheet level, on the back (x<0) side */
+  function gauge(part, y0) {
+    var lo = y0, hi = y0 + 8, mx = 0;
+    for (var i = 0, n = part.length; i < n; i++) {
+      var a = part[i], b = part[(i + 1) % n]; if (Math.max(a[1], b[1]) < lo || Math.min(a[1], b[1]) > hi) continue;
+      [lo, hi].forEach(function (y) { if ((a[1] - y) * (b[1] - y) < 0) { var x = a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]); if (x < mx) mx = x; } });
+      [a, b].forEach(function (q) { if (q[1] >= lo && q[1] <= hi && q[0] < mx) mx = q[0]; });
+    }
+    return -mx;
+  }
+  var PROG = [0, 0.34, 0.67, 1];
+  function tryStep(S, done, k, mirror) {
+    var G = 0;
+    for (var i = 0; i < PROG.length; i++) {
+      var ang = S.target.map(function (a, j) { return done[j] ? a : j === k ? a * PROG[i] : 0; }), st = stage(S, k, ang, mirror);
+      if (i === 0) {
+        var E = S.env || {}; G = gauge(st.part, st.y0);
+        if ((E.gMin > 0 || E.gMax > 0) && (G < 1 || (E.gMin > 0 && G < E.gMin) || (E.gMax > 0 && G > E.gMax))) return { ok: false, prog: 0, tool: G < 1 ? 'gNone' : G < E.gMin ? 'gLo' : 'gHi', G: G, lim: G < E.gMin ? E.gMin : E.gMax };
+      }
+      if (st.hitP || st.hitD || st.hitR || st.hitT) return { ok: false, prog: PROG[i], tool: st.hitP ? 'punch' : st.hitD ? 'die' : st.hitR ? 'ram' : 'table', pt: st.hitP || st.hitD || st.hitR || st.hitT, G: G };
+    }
+    return { ok: true, G: G };
+  }
+  function stepResult(S, done, k, side) {
+    if (side === 'b' || side === 'a') { var mr = (S.sgn[k] > 0) === (side === 'a'), f = tryStep(S, done, k, mr); return { k: k, ok: f.ok, mirror: mr, prog: f.prog, tool: f.tool, pt: f.pt, G: f.G, lim: f.lim, forced: true }; }
+    var a = tryStep(S, done, k, false), b = tryStep(S, done, k, true); a.mirror = false; b.mirror = true;
+    var ga = a.G >= 1 ? a.G : 1e9, gb = b.G >= 1 ? b.G : 1e9, first = ga <= gb ? a : b, second = first === a ? b : a;
+    function pack(x) { return { k: k, ok: x.ok, mirror: x.mirror, prog: x.prog, tool: x.tool, pt: x.pt, G: x.G, lim: x.lim }; }
+    if (first.ok) return pack(first);
+    if (S.env && S.env.gShort && Math.abs(ga - gb) > 0.5) { var r = pack(first); r.other = second.ok; return r; }
+    if (second.ok) return pack(second);
+    return pack(/^g/.test(first.tool) && !/^g/.test(second.tool) ? second : first);
+  }
+  function sequence(S, auto, order, sides) {
+    var n = S.target.length, memo = {}, dead = {};
+    function res(mask, k, side) { var key = mask + ':' + k + ':' + (side || ''); if (!memo[key]) { var done = []; for (var j = 0; j < n; j++) done.push(!!(mask >> j & 1)); memo[key] = stepResult(S, done, k, side); } return memo[key]; }
+    function dfs(mask) {
+      if (mask === (1 << n) - 1) return []; if (dead[mask]) return null;
+      for (var k = 0; k < n; k++) { if (mask >> k & 1) continue; var r = res(mask, k); if (r.ok) { var rest = dfs(mask | 1 << k); if (rest) return [r].concat(rest); } }
+      dead[mask] = 1; return null;
+    }
+    var manual = order && order.length === n;
+    if (!manual && auto && n <= 7) { var f = dfs(0); if (f) return { steps: f, ok: true, searched: true }; }
+    var steps = [], mask = 0, ok = true;
+    for (var i = 0; i < n; i++) { var k = manual ? order[i] : i, r = res(mask, k, manual && sides ? sides[k] : ''); steps.push(r); if (!r.ok) ok = false; mask |= 1 << k; }
+    return { steps: steps, ok: ok, searched: !manual && auto && n <= 7, manual: !!manual };
+  }
+  /* S: {legs (flat), target (signed rad), sgn, t, r, K, punch, die, Rm, bendsInfo:[{gamma,len}]} */
+  function rules(S) {
+    var out = [], t = S.t, V = S.die.V, f = 1.42 * S.Rm * t * t / V, lim = Math.min(S.punch.maxLoad || 1e9, S.die.maxLoad || 1e9);
+    var depth = -topAt(S.die.pts, 0), yq = Math.min(2, V / 4), x0 = 1e99, x1 = -1e99, pp = S.punch.pts;
+    for (var q = 0; q < pp.length; q++) { var pa = pp[q], pb = pp[(q + 1) % pp.length]; if ((pa[1] - yq) * (pb[1] - yq) <= 0 && pa[1] !== pb[1]) { var xx = pa[0] + (pb[0] - pa[0]) * (yq - pa[1]) / (pb[1] - pa[1]); if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; } }
+    if (depth < 0.5) out.push({ id: 'noNotch' }); else if (depth < V / 4) out.push({ id: 'shallow', v: depth, r: V });
+    if (x1 - x0 > V) out.push({ id: 'wideTip', v: x1 - x0, r: V });
+    if (S.die.tMin && t < S.die.tMin - 1e-9) out.push({ id: 'tMin', v: t, r: S.die.tMin });
+    if (S.die.tMax && t > S.die.tMax + 1e-9) out.push({ id: 'tMax', v: t, r: S.die.tMax });
+    if (f > lim) out.push({ id: 'load', v: f, r: lim });
+    var fin = build(S.legs, S.target, S.sgn, t, S.r, S.K);
+    S.bendsInfo.forEach(function (b, i) {
+      var A = Math.abs(S.target[i]), need = V / 2 / Math.cos(A / 2), ossb = (S.r + t) * Math.tan(A / 2);
+      if (S.punch.angle > b.gamma + 1e-9) out.push({ id: 'pAngle', bend: i, v: S.punch.angle, r: b.gamma });
+      if (S.die.angle > b.gamma + 1e-9) out.push({ id: 'dAngle', bend: i, v: S.die.angle, r: b.gamma });
+      [i, i + 1].forEach(function (li) { var have = fin.straight[li] + ossb + (li > 0 && li < S.legs.length - 1 ? 0 : 0); if (have < need - 1e-6) out.push({ id: 'flange', bend: i, v: have, r: need }); });
+      if (S.punch.length && b.len > S.punch.length) out.push({ id: 'pLen', bend: i, v: b.len, r: S.punch.length });
+      if (S.die.length && b.len > S.die.length) out.push({ id: 'dLen', bend: i, v: b.len, r: S.die.length });
+    });
+    return { issues: out, loadPerM: f };
+  }
+  G.PB = { dieVariants: dieVariants, walls: walls, parseSegs: parseSegs, bestSum: bestSum, gauge: gauge, profileFromDXF: profileFromDXF, normPunch: normPunch, normDie: normDie, demoLib: demoLib, partFromFlat: partFromFlat, flatLegs: flatLegs, bendDeduction: bendDeduction, stage: stage, sequence: sequence, rules: rules, bbox: bbox, RAD: RAD };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+(function () {
+  'use strict';
+  var Q = window.LQ, P = window.PB, RAD = P.RAD, LANGS = ['it', 'en', 'el'], LOC = { it: 'it-IT', en: 'en-GB', el: 'el-GR' };
+  var MATS = [{ name: 'S235JR', Rm: 420, rv: 0.16 }, { name: 'AISI 304', Rm: 620, rv: 0.21 }, { name: 'AlMg3 (5754)', Rm: 220, rv: 0.14 }];
+  var T = {
+    title: ['Verifica utensili di piegatura', 'Press brake tooling check', 'Έλεγχος εργαλείων στράντζας'],
+    sub: ['Scegli punzone e matrice dalla tua libreria e guarda, piega per piega, se il pezzo si può fare.', 'Pick a punch and die from your library and see, bend by bend, whether the part can be made.', 'Διάλεξε μαχαίρι και τάκο από τη βιβλιοθήκη σου και δες, στράντζα προς στράντζα, αν το κομμάτι βγαίνει.'],
+    vCheck: ['Verifica', 'Check', 'Έλεγχος'], vLib: ['Libreria utensili', 'Tool library', 'Βιβλιοθήκη εργαλείων'],
+    dxf: ['Sviluppo DXF', 'Flat pattern DXF', 'Ανάπτυγμα DXF'], manual: ['Profilo a mano', 'Manual profile', 'Προφίλ με το χέρι'], sample: ['Esempio', 'Example', 'Παράδειγμα'],
+    thk: ['Spessore mm', 'Thickness mm', 'Πάχος mm'], mat: ['Materiale', 'Material', 'Υλικό'], punch: ['Punzone', 'Punch', 'Μαχαίρι'], die: ['Matrice', 'Die', 'Τάκος'],
+    dirG: ['Direzione pieghe', 'Bend direction', 'Διεύθυνση στραντζών'], blen: ['Lunghezza piega mm', 'Bend length mm', 'Μήκος στράντζας mm'],
+    leg: ['Ala mm', 'Leg mm', 'Φτερό mm'], legOut: ['Ala (quota esterna) mm', 'Leg (outside dim.) mm', 'Φτερό (εξωτερική διάσταση) mm'], legFlat: ['Tratto sviluppo mm', 'Flat length mm', 'Μήκος στο ανάπτυγμα mm'],
+    ang: ['Angolo °', 'Angle °', 'Γωνία °'], dir: ['Verso', 'Direction', 'Φορά'], up: ['su', 'up', 'πάνω'], down: ['giù', 'down', 'κάτω'], after: ['Piega dopo questo tratto', 'Bend after this leg', 'Στράντζα μετά από αυτό το φτερό'],
+    addB: ['+ piega', '+ bend', '+ στράντζα'], delB: ['− piega', '− bend', '− στράντζα'],
+    ok: ['Si può fare', 'Can be made', 'Κατασκευάζεται'], bad: ['Non si può fare con questi utensili', 'Cannot be made with this tooling', 'Δεν κατασκευάζεται με αυτά τα εργαλεία'],
+    nProb: ['{n} problemi', '{n} problems', '{n} προβλήματα'], nProb1: ['1 problema', '1 problem', '1 πρόβλημα'],
+    seq: ['Sequenza', 'Sequence', 'Σειρά'], bendN: ['piega {n}', 'bend {n}', 'στράντζα {n}'], turned: ['girato', 'turned', 'γυρισμένο'],
+    seqAuto: ['Sequenza trovata automaticamente', 'Sequence found automatically', 'Η σειρά βρέθηκε αυτόματα'], seqNone: ['Nessuna sequenza evita le collisioni', 'No sequence avoids the collisions', 'Καμία σειρά δεν αποφεύγει τις συγκρούσεις'], seqList: ['Sequenza nell\'ordine elencato (troppe pieghe per la ricerca)', 'Sequence in listed order (too many bends to search)', 'Σειρά όπως στη λίστα (πολλές στράντζες για αναζήτηση)'],
+    stepT: ['Passo', 'Step', 'Βήμα'], prog: ['Avanzamento piega', 'Bend progress', 'Πρόοδος στράντζας'],
+    info: ['Raggio interno {r} mm · carico {f} kN/m · detrazione a 90° {bd} mm', 'Inside radius {r} mm · load {f} kN/m · 90° bend deduction {bd} mm', 'Εσωτερική ακτίνα {r} mm · φορτίο {f} kN/m · bend deduction 90° {bd} mm'],
+    found: ['Problemi', 'Findings', 'Ευρήματα'],
+    tMin: ['Spessore {v} mm sotto il minimo della matrice ({r} mm)', 'Thickness {v} mm is below the die minimum ({r} mm)', 'Πάχος {v} mm κάτω από το ελάχιστο του τάκου ({r} mm)'],
+    tMax: ['Spessore {v} mm oltre il massimo della matrice ({r} mm)', 'Thickness {v} mm is above the die maximum ({r} mm)', 'Πάχος {v} mm πάνω από το μέγιστο του τάκου ({r} mm)'],
+    load: ['Carico {v} kN/m oltre il limite degli utensili ({r} kN/m)', 'Load {v} kN/m exceeds the tooling limit ({r} kN/m)', 'Φορτίο {v} kN/m πάνω από το όριο των εργαλείων ({r} kN/m)'],
+    pAngle: ['Piega {b}: il punzone da {v}° non arriva a {r}°', 'Bend {b}: the {v}° punch cannot reach {r}°', 'Στράντζα {b}: το μαχαίρι {v}° δεν φτάνει τις {r}°'],
+    dAngle: ['Piega {b}: la matrice da {v}° non arriva a {r}°', 'Bend {b}: the {v}° die cannot reach {r}°', 'Στράντζα {b}: ο τάκος {v}° δεν φτάνει τις {r}°'],
+    flange: ['Piega {b}: ala di {v} mm troppo corta per V{V}, minimo {r} mm', 'Bend {b}: {v} mm flange is too short for V{V}, minimum {r} mm', 'Στράντζα {b}: φτερό {v} mm πολύ κοντό για V{V}, ελάχιστο {r} mm'],
+    pLen: ['Piega {b}: lunga {v} mm, punzone disponibile {r} mm', 'Bend {b}: {v} mm long, punch available {r} mm', 'Στράντζα {b}: μήκος {v} mm, διαθέσιμο μαχαίρι {r} mm'],
+    dLen: ['Piega {b}: lunga {v} mm, matrice disponibile {r} mm', 'Bend {b}: {v} mm long, die available {r} mm', 'Στράντζα {b}: μήκος {v} mm, διαθέσιμος τάκος {r} mm'],
+    colP: ['Piega {b}: il pezzo urta il punzone', 'Bend {b}: the part hits the punch', 'Στράντζα {b}: το κομμάτι χτυπά στο μαχαίρι'], colD: ['Piega {b}: il pezzo urta la matrice', 'Bend {b}: the part hits the die', 'Στράντζα {b}: το κομμάτι χτυπά στον τάκο'],
+    noBend: ['Nessuna linea di piega trovata nel DXF. Controlla i layer.', 'No bend lines found in the DXF. Check the layers.', 'Δεν βρέθηκαν γραμμές στράντζας στο DXF. Έλεγξε τα layers.'],
+    noV: ['Imposta l\'apertura V di questa matrice nella libreria.', 'Set the V opening of this die in the library.', 'Όρισε το άνοιγμα V αυτού του τάκου στη βιβλιοθήκη.'],
+    machine: ['Macchina', 'Machine', 'Μηχανή'], anyM: ['— qualsiasi —', '— any —', '— οποιαδήποτε —'], machines: ['Macchine', 'Machines', 'Μηχανές'], addM: ['Aggiungi macchina', 'Add machine', 'Προσθήκη μηχανής'],
+    fTons: ['Forza t', 'Tonnage t', 'Tonnage t'], fMLen: ['Lunghezza di piega mm', 'Bending length mm', 'Μήκος κάμψης mm'], fOpen: ['Luce max mm', 'Open height mm', 'Μέγιστο άνοιγμα mm'], fClamp: ['Attacco utensili', 'Tool clamping', 'Σύστημα πρόσδεσης'],
+    fits: ['Monta su', 'Fits on', 'Κουμπώνει σε'], nTools: ['{p} punzoni · {d} matrici', '{p} punches · {d} dies', '{p} μαχαίρια · {d} τάκοι'],
+    noFit: ['Nessun punzone o matrice è assegnato a questa macchina. Assegnali nella libreria.', 'No punch or die is assigned to this machine. Assign them in the library.', 'Κανένα μαχαίρι ή τάκος δεν έχει οριστεί για αυτή τη μηχανή. Όρισέ τα στη βιβλιοθήκη.'],
+    mForce: ['Piega {b}: servono {v} t, la macchina ne ha {r}', 'Bend {b}: needs {v} t, the machine has {r}', 'Στράντζα {b}: θέλει {v} t, η μηχανή έχει {r}'],
+    mLen: ['Piega {b}: lunga {v} mm, la macchina piega {r} mm', 'Bend {b}: {v} mm long, the machine bends {r} mm', 'Στράντζα {b}: μήκος {v} mm, η μηχανή στραντζάρει {r} mm'],
+    mOpen: ['Punzone + matrice alti {v} mm, luce della macchina {r} mm', 'Punch + die are {v} mm tall, machine opening {r} mm', 'Μαχαίρι + τάκος έχουν ύψος {v} mm, άνοιγμα μηχανής {r} mm'],
+    force: ['forza max {f} t', 'max force {f} t', 'μέγ. δύναμη {f} t'], newM: ['Nuova macchina', 'New machine', 'Νέα μηχανή'],
+    fRamW: ['Traversa: spessore mm', 'Ram: thickness mm', 'Τραβέρσα: πάχος mm'], fHW: ['Portapunzone: larghezza mm', 'Punch holder: width mm', 'Βάση μαχαιριού: πλάτος mm'], fHH: ['Portapunzone: altezza mm', 'Punch holder: height mm', 'Βάση μαχαιριού: ύψος mm'],
+    fTabW: ['Banco: larghezza mm', 'Table: width mm', 'Τραπέζι: πλάτος mm'], fGMin: ['Riscontro: distanza min mm', 'Back gauge: min distance mm', 'Πίσω οδηγός: ελάχ. απόσταση mm'], fGMax: ['Riscontro: distanza max mm', 'Back gauge: max distance mm', 'Πίσω οδηγός: μέγ. απόσταση mm'],
+    zero: ['0 = non controllato', '0 = not checked', '0 = δεν ελέγχεται'], fSegs: ['Segmenti mm (es. 100x2, 50, 40, 20, 15, 10)', 'Segments mm (e.g. 100x2, 50, 40, 20, 15, 10)', 'Κομμάτια mm (π.χ. 100x2, 50, 40, 20, 15, 10)'],
+    vList: ['Aperture V di questa matrice', 'V openings of this die', 'Ανοίγματα V αυτού του τάκου'], face: ['faccia {r}°', 'face {r}°', 'πλευρά {r}°'], vNom: ['V nominale', 'nominal V', 'ονομαστικό V'], vUse: ['usa', 'use', 'χρήση'],
+    colR: ['Piega {b}: il pezzo urta la traversa o il portapunzone', 'Bend {b}: the part hits the ram or the punch holder', 'Στράντζα {b}: το κομμάτι χτυπά στην τραβέρσα ή στη βάση του μαχαιριού'],
+    colT: ['Piega {b}: il pezzo urta il banco', 'Bend {b}: the part hits the table', 'Στράντζα {b}: το κομμάτι χτυπά στο τραπέζι'],
+    gLo: ['Piega {b}: riscontro a {v} mm, la macchina arriva al minimo a {r} mm', 'Bend {b}: gauge at {v} mm, the machine reaches {r} mm at the closest', 'Στράντζα {b}: οδηγός στα {v} mm, η μηχανή πλησιάζει το πολύ στα {r} mm'],
+    gHi: ['Piega {b}: riscontro a {v} mm, oltre la corsa di {r} mm', 'Bend {b}: gauge at {v} mm, beyond the {r} mm travel', 'Στράντζα {b}: οδηγός στα {v} mm, πέρα από τη διαδρομή των {r} mm'],
+    gNone: ['Piega {b}: nessun appoggio per il riscontro posteriore', 'Bend {b}: nothing for the back gauge to stop against', 'Στράντζα {b}: δεν υπάρχει ακουμπιστήρι για τον πίσω οδηγό'],
+    boxDeepP: ['Piega {b}: aletta laterale alta {v} mm, il punzone è alto {r} mm', 'Bend {b}: side flange {v} mm tall, the punch is {r} mm tall', 'Στράντζα {b}: πλαϊνό φτερό ύψους {v} mm, το μαχαίρι έχει ύψος {r} mm'],
+    boxDeepD: ['Piega {b}: aletta laterale alta {v} mm, la matrice è alta {r} mm', 'Bend {b}: side flange {v} mm tall, the die is {r} mm tall', 'Στράντζα {b}: πλαϊνό φτερό ύψους {v} mm, ο τάκος έχει ύψος {r} mm'],
+    order: ['Ordine tra le direzioni: prima le pieghe {x}, poi le pieghe {y}', 'Order between directions: {x} bends first, then {y} bends', 'Σειρά ανάμεσα στις διευθύνσεις: πρώτα οι στράντζες {x}, μετά οι {y}'],
+    plan: ['Sviluppo', 'Flat pattern', 'Ανάπτυγμα'], gaugeAt: ['riscontro a {g} mm', 'back gauge at {g} mm', 'πίσω οδηγός στα {g} mm'],
+    h5: ['Scatole: se le pieghe sono in due direzioni, quelle fatte per prime diventano alette laterali, e il punzone (o la matrice) deve entrare tra di esse. Si cerca la combinazione di segmenti più lunga che entra; se è più corta della piega, la piega si fa in più colpi e compare tra le note. Vengono provati entrambi gli ordini.', 'Boxes: with bends in two directions, the ones made first become side flanges and the punch (or die) must fit between them. The longest segment combination that fits is used; if it is shorter than the bend, the bend is made in several hits and listed under notes. Both orders are tried.', 'Κουτιά: με στράντζες σε δύο διευθύνσεις, όσες γίνουν πρώτες γίνονται πλαϊνά φτερά και το μαχαίρι (ή ο τάκος) πρέπει να χωρά ανάμεσα. Χρησιμοποιείται ο μακρύτερος συνδυασμός κομματιών που χωρά· αν είναι κοντύτερος από τη στράντζα, η στράντζα γίνεται σε περισσότερα πατήματα και μπαίνει στις σημειώσεις. Δοκιμάζονται και οι δύο σειρές.'],
+    h7: ['Tra i due versi possibili del pezzo si sceglie quello con il riscontro più vicino. Con l\'opzione del lato corto attiva, l\'altro verso non viene mai usato.', 'Of the two ways the part can face, the one with the closer back gauge is chosen. With the short-side option on, the other way is never used.', 'Από τους δύο τρόπους που μπορεί να μπει το κομμάτι, επιλέγεται αυτός με τον πιο κοντινό πίσω οδηγό. Με την επιλογή της κοντής πλευράς ενεργή, ο άλλος δεν χρησιμοποιείται ποτέ.'],
+    h6: ['Traversa, portapunzone e banco sono rettangoli con le misure della macchina. Il riscontro posteriore tocca il punto più arretrato del pezzo a livello della lamiera; il retro è a sinistra nel disegno.', 'Ram, punch holder and table are rectangles with the machine dimensions. The back gauge touches the rearmost point of the part at sheet level; the back is on the left of the drawing.', 'Τραβέρσα, βάση μαχαιριού και τραπέζι είναι ορθογώνια με τις διαστάσεις της μηχανής. Ο πίσω οδηγός ακουμπά στο πιο πίσω σημείο του κομματιού στο ύψος της λαμαρίνας· το πίσω μέρος είναι αριστερά στο σχέδιο.'],
+    noNotch: ['La matrice non ha una V sotto il punzone su questa faccia. Nella libreria controlla l\'orientamento del profilo (Capovolgi) o attiva la V giusta.', 'The die has no V under the punch on this face. In the library, check the profile orientation (Flip) or enable the right V.', 'Ο τάκος δεν έχει V κάτω από το μαχαίρι σε αυτή την πλευρά. Στη βιβλιοθήκη έλεγξε τον προσανατολισμό του προφίλ (Αναποδογύρισμα) ή ενεργοποίησε το σωστό V.'],
+    shallow: ['La V della matrice è profonda solo {v} mm per un\'apertura V{r}: controlla il V nominale o il profilo.', 'The die V is only {v} mm deep for a V{r} opening: check the nominal V or the profile.', 'Το V του τάκου έχει βάθος μόνο {v} mm για άνοιγμα V{r}: έλεγξε το ονομαστικό V ή το προφίλ.'],
+    wideTip: ['La punta del punzone è larga {v} mm, più della V{r}: controlla l\'orientamento del profilo (punta in basso) o scegli una matrice più grande.', 'The punch tip is {v} mm wide, more than V{r}: check the profile orientation (tip down) or pick a larger die.', 'Η μύτη του μαχαιριού έχει πλάτος {v} mm, περισσότερο από το V{r}: έλεγξε τον προσανατολισμό του προφίλ (μύτη κάτω) ή διάλεξε μεγαλύτερο τάκο.'],
+    zoomT: ['Zoom sugli utensili', 'Zoom on tools', 'Ζουμ στα εργαλεία'], zoomP: ['Mostra tutto il pezzo', 'Show whole part', 'Όλο το κομμάτι'],
+    multi: ['Piega {b}: tra le alette entrano al massimo {hi} mm di {tool}. Con {v} mm si fa in {n} colpi.', 'Bend {b}: at most {hi} mm of {tool} fits between the side flanges. With {v} mm it takes {n} hits.', 'Στράντζα {b}: ανάμεσα στα πλαϊνά φτερά χωρούν έως {hi} mm ({tool}). Με {v} mm γίνεται σε {n} πατήματα.'],
+    hits: ['Piega {b}: con {v} mm di {tool} servono {n} colpi, il limite è {r}.', 'Bend {b}: with {v} mm of {tool} it takes {n} hits, the limit is {r}.', 'Στράντζα {b}: με {v} mm ({tool}) θέλει {n} πατήματα, το όριο είναι {r}.'],
+    fitNone: ['Piega {b}: nessun segmento di {tool} entra tra le alette ({hi} mm). Il più corto è {v} mm.', 'Bend {b}: no {tool} segment fits between the side flanges ({hi} mm). The shortest is {v} mm.', 'Στράντζα {b}: κανένα κομμάτι ({tool}) δεν χωρά ανάμεσα στα πλαϊνά φτερά ({hi} mm). Το μικρότερο είναι {v} mm.'],
+    segNone: ['Piega {b}: tra le alette entrano al massimo {hi} mm di {tool}. Inserisci lunghezza o segmenti nella libreria.', 'Bend {b}: at most {hi} mm of {tool} fits between the side flanges. Enter its length or segments in the library.', 'Στράντζα {b}: ανάμεσα στα πλαϊνά φτερά χωρούν έως {hi} mm ({tool}). Βάλε μήκος ή κομμάτια στη βιβλιοθήκη.'],
+    notes: ['Note', 'Notes', 'Σημειώσεις'], boxT: ['Impostazioni del controllo', 'Check settings', 'Ρυθμίσεις ελέγχου'],
+    cGShort: ['Il riscontro posteriore appoggia sempre sul lato corto del pezzo', 'The back gauge always stops against the short side of the part', 'Ο πίσω οδηγός ακουμπά πάντα στην κοντή πλευρά του κομματιού'],
+    gSide: ['Con il riscontro sul lato corto questa piega urta. Girando il pezzo passerebbe, ma il riscontro andrebbe sul lato lungo.', 'With the gauge on the short side this bend collides. Turned round it would pass, but the gauge would be on the long side.', 'Με τον οδηγό στην κοντή πλευρά αυτή η στράντζα χτυπά. Γυρισμένο θα περνούσε, αλλά ο οδηγός θα πήγαινε στη μακριά πλευρά.'],
+    cCl: ['Gioco totale verso le alette mm', 'Total clearance to side flanges mm', 'Συνολικό διάκενο από τα πλαϊνά φτερά mm'], cTol: ['Tratto non premuto ammesso mm', 'Allowed unpressed length mm', 'Επιτρεπτό μήκος που δεν πατιέται mm'], cHits: ['Colpi massimi per piega', 'Max hits per bend', 'Μέγιστα πατήματα ανά στράντζα'],
+    seqMan: ['Sequenza impostata da te', 'Sequence set by you', 'Σειρά ορισμένη από εσένα'], setSeq: ['Imposta tu sequenza e lato del riscontro', 'Set sequence and gauge side yourself', 'Ορισμός σειράς και πλευράς οδηγού με το χέρι'], autoSeq: ['Torna alla sequenza automatica', 'Back to automatic sequence', 'Επιστροφή στην αυτόματη σειρά'],
+    gAuto: ['riscontro: automatico', 'gauge: automatic', 'οδηγός: αυτόματα'], gOn: ['riscontro sul lato del tratto {n} ({l} mm)', 'gauge on the side of leg {n} ({l} mm)', 'οδηγός στην πλευρά του φτερού {n} ({l} mm)'], gSel: ['Lato del riscontro', 'Gauge side', 'Πλευρά οδηγού'],
+    earlier: ['prima', 'earlier', 'νωρίτερα'], later: ['dopo', 'later', 'αργότερα'],
+    dirHint: ['Se in officina questo pezzo si fa, controlla il verso (su/giù) di ogni piega nella tabella: da un DXF senza layer di verso tutte le pieghe sono considerate «su». Puoi anche impostare tu la sequenza.', 'If this part is made in your shop, check the direction (up/down) of each bend in the table: from a DXF without direction layers every bend is taken as "up". You can also set the sequence yourself.', 'Αν το κομμάτι βγαίνει στην πράξη, έλεγξε τη φορά (πάνω/κάτω) κάθε στράντζας στον πίνακα: από DXF χωρίς layer φοράς όλες οι στράντζες θεωρούνται «πάνω». Μπορείς επίσης να ορίσεις εσύ τη σειρά.'],
+    noTool: ['Aggiungi almeno un punzone e una matrice nella libreria.', 'Add at least one punch and one die to the library.', 'Πρόσθεσε τουλάχιστον ένα μαχαίρι και έναν τάκο στη βιβλιοθήκη.'],
+    layers: ['Layer del DXF', 'DXF layers', 'Layers του DXF'], rCut: ['taglio', 'cut', 'κοπή'], rBend: ['piega', 'bend', 'στράντζα'], rIgn: ['ignora', 'ignore', 'αγνόησε'],
+    punches: ['Punzoni', 'Punches', 'Μαχαίρια'], dies: ['Matrici', 'Dies', 'Τάκοι'], addP: ['Aggiungi punzone da DXF', 'Add punch from DXF', 'Προσθήκη μαχαιριού από DXF'], addD: ['Aggiungi matrice da DXF', 'Add die from DXF', 'Προσθήκη τάκου από DXF'],
+    libNote: ['Registra le macchine, poi i punzoni e le matrici con i loro dati, e spunta su quali macchine montano. Il DXF dell\'utensile deve contenere il profilo chiuso in sezione: punzone con la punta in basso, matrice con la V in alto. La libreria resta in questo browser: esportala per conservarla.', 'Enter the machines, then the punches and dies with their data, and tick which machines each one fits. The tool DXF must hold the closed cross-section: punch with the tip down, die with the V up. The library stays in this browser: export it to keep it.', 'Πέρασε τις μηχανές, μετά τα μαχαίρια και τους τάκους με τα στοιχεία τους, και τσέκαρε σε ποιες μηχανές κουμπώνει το καθένα. Το DXF του εργαλείου πρέπει να έχει το κλειστό προφίλ σε τομή: μαχαίρι με τη μύτη κάτω, τάκος με το V πάνω. Η βιβλιοθήκη μένει σε αυτόν τον browser: κάνε εξαγωγή για να την κρατήσεις.'],
+    name: ['Nome', 'Name', 'Όνομα'], fAngle: ['Angolo °', 'Angle °', 'Γωνία °'], fRad: ['Raggio punta mm', 'Tip radius mm', 'Ακτίνα μύτης mm'], fLoad: ['Carico max kN/m', 'Max load kN/m', 'Μέγ. φορτίο kN/m'], fLen: ['Lunghezza disponibile mm', 'Available length mm', 'Διαθέσιμο μήκος mm'],
+    fV: ['Apertura V mm', 'V opening mm', 'Άνοιγμα V mm'], fTmin: ['Spessore min mm', 'Min thickness mm', 'Ελάχ. πάχος mm'], fTmax: ['Spessore max mm', 'Max thickness mm', 'Μέγ. πάχος mm'], fH: ['altezza {h} mm', 'height {h} mm', 'ύψος {h} mm'],
+    flip: ['Capovolgi', 'Flip', 'Αναποδογύρισμα'], mirror: ['Specchia', 'Mirror', 'Καθρέφτισμα'], del: ['Elimina', 'Delete', 'Διαγραφή'], demoTag: ['esempio', 'example', 'παράδειγμα'],
+    restore: ['Ripristina libreria integrata', 'Restore built-in library', 'Επαναφορά ενσωματωμένης βιβλιοθήκης'],
+    exp: ['Esporta libreria', 'Export library', 'Εξαγωγή βιβλιοθήκης'], imp: ['Importa libreria', 'Import library', 'Εισαγωγή βιβλιοθήκης'], demo: ['Aggiungi utensili di esempio', 'Add example tools', 'Προσθήκη εργαλείων-παραδειγμάτων'],
+    errRead: ['file non leggibile come DXF ASCII.', 'could not be read as an ASCII DXF.', 'δεν διαβάζεται ως DXF ASCII.'], errProf: ['nessun profilo chiuso trovato.', 'no closed profile found.', 'δεν βρέθηκε κλειστό προφίλ.'], errLib: ['file libreria non valido.', 'not a valid library file.', 'μη έγκυρο αρχείο βιβλιοθήκης.'],
+    how: ['Come funziona il controllo', 'How the check works', 'Πώς γίνεται ο έλεγχος'],
+    h1: ['Il pezzo è ricostruito in sezione con raggi reali; la lunghezza sulla fibra neutra resta quella dello sviluppo (fattore K 0,40).', 'The part is rebuilt in cross-section with real radii; the neutral-axis length stays equal to the flat pattern (K-factor 0.40).', 'Το κομμάτι ξαναχτίζεται σε τομή με πραγματικές ακτίνες· το μήκος στην ουδέτερη ίνα μένει ίσο με το ανάπτυγμα (συντελεστής K 0,40).'],
+    h2: ['A ogni passo la lamiera viene appoggiata sugli spigoli reali della matrice e il punzone viene calato fino a toccarla; poi si cercano intersezioni tra pezzo e utensili a 0, 34, 67 e 100 % della piega, anche con il pezzo girato.', 'At each step the sheet is seated on the real die shoulders and the punch is lowered until it touches; part and tools are then tested for intersection at 0, 34, 67 and 100 % of the bend, also with the part turned round.', 'Σε κάθε βήμα η λαμαρίνα κάθεται στις πραγματικές ακμές του τάκου και το μαχαίρι κατεβαίνει μέχρι να την αγγίξει· μετά ελέγχεται τομή κομματιού και εργαλείων στο 0, 34, 67 και 100 % της στράντζας, και με το κομμάτι γυρισμένο.'],
+    h3: ['Fino a 7 pieghe vengono provate tutte le sequenze. Ala minima = (V/2) ÷ cos(angolo di piega/2). Carico = 1,42 · Rm · s² ÷ V in kN/m. Raggio interno = frazione di V secondo il materiale, mai sotto il raggio del punzone.', 'Up to 7 bends, every sequence is tried. Minimum flange = (V/2) ÷ cos(bend angle/2). Load = 1.42 · Rm · t² ÷ V in kN/m. Inside radius = a fraction of V by material, never below the punch radius.', 'Μέχρι 7 στράντζες δοκιμάζονται όλες οι σειρές. Ελάχιστο φτερό = (V/2) ÷ cos(γωνία κάμψης/2). Φορτίο = 1,42 · Rm · t² ÷ V σε kN/m. Εσωτερική ακτίνα = κλάσμα του V ανά υλικό, ποτέ κάτω από την ακτίνα του μαχαιριού.'],
+    h4: ['Non sono controllati: il profilo che cambia lungo la piega (si usa la sezione più larga) e le posizioni intermedie tra 0, 34, 67 e 100 % della piega.', 'Not checked: a profile that changes along the bend (the widest section is used) and the positions between 0, 34, 67 and 100 % of the bend.', 'Δεν ελέγχονται: προφίλ που αλλάζει κατά μήκος της στράντζας (χρησιμοποιείται η πιο πλατιά τομή) και οι ενδιάμεσες θέσεις ανάμεσα σε 0, 34, 67 και 100 % της στράντζας.']
+  };
+  var lang, lib, view = 'check', part, selP, selD, selM = '', fit = false, userStep = false, cfg = { boxCl: 1, boxTol: 5, maxHits: 3, gShort: 1 }, si = 0, prog = 1, msgs = [], open = {}, ev = null, K = 0.4;
+  function t(k, o) { var r = T[k]; r = r ? r[LANGS.indexOf(lang)] : k; if (o) Object.keys(o).forEach(function (x) { r = r.replace('{' + x + '}', o[x]); }); return r; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
+  function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+  function nf(x, d) { return (isFinite(x) ? x : 0).toLocaleString(LOC[lang], { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function num(v) { var x = parseFloat(String(v).replace(',', '.')); return isFinite(x) && x >= 0 ? x : 0; }
+  function opt(v, label, c) { return '<option value="' + esc(v) + '"' + (String(v) === String(c) ? ' selected' : '') + '>' + esc(label) + '</option>'; }
+  function tools(kind) { return lib.filter(function (x) { return x.kind === kind; }); }
+  function avail(kind) { var a = tools(kind); return selM ? a.filter(function (x) { return x.fits && x.fits.indexOf(selM) >= 0; }) : a; }
+  function dieOpts() {
+    var out = []; avail('die').forEach(function (d) {
+      var vs = P.dieVariants(d).filter(function (v) { return v.use; }), multi = vs.length > 1;
+      vs.forEach(function (v) { out.push({ val: d.id + '|' + v.key, label: d.name + (multi ? ' · V' + v.V + (v.rot ? ' (' + v.rot + '°)' : '') : ''), die: d, v: v }); });
+    }); return out;
+  }
+  function activeDie() {
+    var o = dieOpts().filter(function (x) { return x.val === selD; })[0]; if (!o) return null;
+    return { id: o.die.id, name: o.label, pts: o.v.pts, V: o.v.V, angle: o.die.angle, maxLoad: o.die.maxLoad, length: o.die.length, tMin: o.die.tMin, tMax: o.die.tMax, segs: o.die.segs };
+  }
+  function lab(g, i) { return (ev && ev.groups.length > 1 || (part.mode === 'dxf' && part.groups.length > 1) ? 'ABCDEF'.charAt(g) : '') + (i + 1); }
+  function byId(id) { for (var i = 0; i < lib.length; i++) if (lib[i].id === id) return lib[i]; return null; }
+  function saveLib() { save('pb.lib', lib); save('pb.libv', LIBV); }
+  function samplePart() { part = { mode: 'manual', name: t('sample'), t: 1.5, mat: 0, out: [15, 25, 80], bends: [{ gamma: 90, dir: 1 }, { gamma: 90, dir: 1 }], blen: 500 }; si = 0; prog = 1; }
+
+  function evaluate() {
+    ev = null; var pu = byId(selP), di = activeDie();
+    if (!pu || !di || !(di.V > 0)) return;
+    var r = Math.max(MATS[part.mat].rv * di.V, pu.radius || 0), mc = byId(selM), list, issues = [], notes = [], fmax = 0, loadPerM = 0;
+    var env = mc ? { ramW: mc.ramW || 0, hW: mc.hW || 0, hH: mc.hH || 0, tableW: mc.tableW || 0, gMin: mc.gMin || 0, gMax: mc.gMax || 0 } : {}; env.gShort = !!cfg.gShort;
+    if (part.mode === 'manual') { var mb = part.bends.map(function (b) { return { gamma: b.gamma, dir: b.dir, len: part.blen }; }); list = [{ bends: mb, legs: P.flatLegs(part.out, mb, part.t, r, K) }]; }
+    else list = part.groups;
+    if (!list.length || !list[0].bends.length) return;
+    var groups = list.map(function (g, gi) {
+      var S = { legs: g.legs, target: g.bends.map(function (b) { return b.dir * (180 - b.gamma) * RAD; }), sgn: g.bends.map(function (b) { return b.dir; }), t: part.t, r: r, K: K, punch: pu, die: di, Rm: MATS[part.mat].Rm, bendsInfo: g.bends, env: env };
+      var ord = part.orders && part.orders[gi]; if (ord && ord.length !== g.bends.length) { ord = null; part.orders[gi] = null; }
+      var rl = P.rules(S), sq = P.sequence(S, true, ord, ord && part.sides ? part.sides[gi] : null); loadPerM = rl.loadPerM;
+      rl.issues.forEach(function (x) { x.g = gi; if (x.bend == null && gi > 0) return; issues.push(x); });
+      var broken = rl.issues.some(function (x) { return x.id === 'noNotch' || x.id === 'wideTip'; });
+      sq.steps.forEach(function (s) { if (!s.ok && !(broken && /punch|die/.test(s.tool))) issues.push({ g: gi, bend: s.k, id: { punch: 'colP', die: 'colD', ram: 'colR', table: 'colT', gNone: 'gNone', gLo: 'gLo', gHi: 'gHi' }[s.tool], v: /^g(Lo|Hi)/.test(s.tool) ? s.G : null, r: s.lim }); });
+      g.bends.forEach(function (b, i) {
+        var f = rl.loadPerM * b.len / 1000 / 9.81; if (f > fmax) fmax = f;
+        if (mc && mc.tons && f > mc.tons) issues.push({ g: gi, id: 'mForce', bend: i, v: f, r: mc.tons });
+        if (mc && mc.length && b.len > mc.length) issues.push({ g: gi, id: 'mLen', bend: i, v: b.len, r: mc.length });
+      });
+      return { S: S, rules: rl, seq: sq };
+    });
+    var hp = P.bbox(pu.pts), hd = P.bbox(di.pts), Hp = hp[3] - hp[1], Hd = hd[3] - hd[1], order = null;
+    if (mc && mc.open && Hp + Hd > mc.open) issues.push({ g: 0, id: 'mOpen', v: Hp + Hd, r: mc.open });
+    if (part.mode === 'dxf' && list.length > 1) {
+      var box = function (first, second) {
+        var W = P.walls(list, second, first, part.t, r, K), out = []; if (!W) return out;
+        W.forEach(function (w, i) {
+          var b = list[second].bends[i];
+          [w.L, w.R].forEach(function (wall) { if (!wall) return; var same = wall.dir === b.dir, H = same ? Hp : Hd; if (wall.h > H) out.push({ g: second, bend: i, id: same ? 'boxDeepP' : 'boxDeepD', v: wall.h, r: H }); });
+          if (w.L && w.R && w.L.dir === w.R.dir) {
+            var same = w.L.dir === b.dir, tool = same ? pu : di, hi = w.Wi - cfg.boxCl, segs = P.parseSegs(tool.segs, tool.length), tn = t(same ? 'punch' : 'die').toLowerCase();
+            if (!segs.length) out.push({ g: second, bend: i, id: 'segNone', hi: hi, tool: tn });
+            else {
+              var s = P.bestSum(segs, hi), nh = s > 0 ? Math.ceil((w.Lb - cfg.boxTol) / s) : 0;
+              if (!(s > 0)) out.push({ g: second, bend: i, id: 'fitNone', hi: hi, v: Math.min.apply(null, segs), tool: tn });
+              else if (nh > cfg.maxHits) out.push({ g: second, bend: i, id: 'hits', v: s, n: nh, r: cfg.maxHits, tool: tn });
+              else if (nh > 1) out.push({ g: second, bend: i, id: 'multi', hi: hi, v: s, n: nh, tool: tn, note: true });
+            }
+          }
+        });
+        return out;
+      };
+      var cnt = function (l) { return l.filter(function (x) { return !x.note; }).length * 100 + l.length; }, a = box(0, 1), b2 = box(1, 0), pick = cnt(a) <= cnt(b2) ? a : b2;
+      order = pick === a ? [0, 1] : [1, 0]; notes = pick.filter(function (x) { return x.note; }); issues = issues.concat(pick.filter(function (x) { return !x.note; }));
+    }
+    ev = { groups: groups, issues: issues, notes: notes, ok: !issues.length, fmax: fmax, loadPerM: loadPerM, order: order, r: r, pu: pu, di: di };
+    if (part.mode === 'manual' || !(part.gi < groups.length)) part.gi = 0;
+    if (si >= groups[part.gi].seq.steps.length) si = 0;
+  }
+  function path(pts, X, Y) { var s = ''; for (var i = 0; i < pts.length; i++) s += (i ? 'L' : 'M') + X(pts[i][0]) + ' ' + Y(pts[i][1]); return s + 'Z'; }
+  function simSvg() {
+    if (!ev) return '';
+    var G = ev.groups[part.gi], st = G.seq.steps[si], S = G.S, done = {}; for (var i = 0; i < si; i++) done[G.seq.steps[i].k] = 1;
+    var ang = S.target.map(function (a, j) { return done[j] ? a : j === st.k ? a * prog : 0; }), g = P.stage(S, st.k, ang, st.mirror);
+    var fing = st.G > 0 ? [[-st.G - 30, 0], [-st.G, 0], [-st.G, 12], [-st.G - 30, 12]] : null;
+    var tb = P.bbox(g.punch.concat(g.die)), pad = 6, b, top, bot;
+    if (fit) {
+      b = P.bbox(g.part.concat(g.punch, g.die, fing || [])); g.env.forEach(function (e) { var eb = P.bbox(e); b[0] = Math.min(b[0], eb[0]); b[2] = Math.max(b[2], eb[2]); });
+      top = Math.max(b[3], tb[3] + (g.env.length ? 30 : 0)); bot = Math.min(b[1], tb[1] - (S.env.tableW > 0 ? 20 : 0));
+    } else {
+      var hw = Math.max((tb[3] - tb[1]) * 0.55, (tb[2] - tb[0]) / 2 + 30); g.env.forEach(function (e) { var eb = P.bbox(e); hw = Math.max(hw, (eb[2] - eb[0]) / 2 + 15); });
+      b = [-hw, 0, hw, 0]; top = tb[3] + (g.env.length ? 30 : 0); bot = tb[1] - (S.env.tableW > 0 ? 20 : 0);
+    }
+    var w = b[2] - b[0] + 2 * pad, h = top - bot + 2 * pad;
+    function X(x) { return (x - b[0] + pad).toFixed(2); } function Y(y) { return (top - y + pad).toFixed(2); }
+    var s = '<svg viewBox="0 0 ' + w.toFixed(1) + ' ' + h.toFixed(1) + '" role="img" aria-label="' + t('stepT') + ' ' + (si + 1) + '">';
+    g.env.forEach(function (e) { s += '<path d="' + path(e, X, Y) + '" fill="var(--line)" stroke="var(--mute)" stroke-width="1" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>'; });
+    s += '<path d="' + path(g.die, X, Y) + '" fill="var(--tool)" stroke="var(--ink)" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+    s += '<path d="' + path(g.punch, X, Y) + '" fill="var(--tool)" stroke="var(--ink)" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+    if (fing) s += '<path d="' + path(fing, X, Y) + '" fill="var(--ok)" stroke="var(--ok)" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+    s += '<path d="' + path(g.part, X, Y) + '" fill="var(--accent)" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+    [g.hitP, g.hitD, g.hitR, g.hitT].forEach(function (p) { if (p) s += '<circle cx="' + X(p[0]) + '" cy="' + Y(p[1]) + '" r="' + (Math.max(w, h) * 0.035).toFixed(1) + '" fill="var(--bad)" fill-opacity=".25" stroke="var(--bad)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>'; });
+    return s + '</svg>';
+  }
+  function planSvg() {
+    if (part.mode !== 'dxf' || !part.groups.length) return '';
+    var pts = []; part.pieces.forEach(function (p) { if (part.roles[p.layer] === 'cut') p.pts.forEach(function (q) { pts.push(q); }); }); if (!pts.length) return '';
+    var b = P.bbox(pts), w = b[2] - b[0], h = b[3] - b[1], pad = Math.max(w, h) * 0.05, fs = Math.max(w, h) * 0.05;
+    function X(x) { return (x - b[0] + pad).toFixed(2); } function Y(y) { return (b[3] - y + pad).toFixed(2); }
+    var d = ''; part.pieces.forEach(function (p) { if (part.roles[p.layer] !== 'cut') return; p.pts.forEach(function (q, i) { d += (i ? 'L' : 'M') + X(q[0]) + ' ' + Y(q[1]); }); });
+    var s = '<svg viewBox="0 0 ' + (w + 2 * pad).toFixed(1) + ' ' + (h + 2 * pad).toFixed(1) + '" role="img" aria-label="' + t('plan') + '" style="max-height:240px"><path d="' + d + '" fill="none" stroke="var(--ink)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>';
+    part.groups.forEach(function (g, gi) {
+      var dx = Math.cos(g.ang), dy = Math.sin(g.ang), on = gi === part.gi, col = on ? 'var(--accent)' : 'var(--mute)';
+      g.bends.forEach(function (bd, i) {
+        var p0 = [-dy * bd.off + dx * bd.s0, dx * bd.off + dy * bd.s0], p1 = [-dy * bd.off + dx * bd.s1, dx * bd.off + dy * bd.s1], fr = 0.5 + ((i % 3) - 1) * 0.2, m = [p0[0] + (p1[0] - p0[0]) * fr, p0[1] + (p1[1] - p0[1]) * fr];
+        s += '<line x1="' + X(p0[0]) + '" y1="' + Y(p0[1]) + '" x2="' + X(p1[0]) + '" y2="' + Y(p1[1]) + '" stroke="' + col + '" stroke-width="' + (on ? 2.2 : 1.2) + '" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>' +
+          '<circle cx="' + X(m[0]) + '" cy="' + Y(m[1]) + '" r="' + (fs * 0.85).toFixed(1) + '" fill="var(--card)" stroke="' + col + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/><text x="' + X(m[0]) + '" y="' + Y(m[1]) + '" text-anchor="middle" dominant-baseline="central" font-family="ui-monospace,Menlo,Consolas,monospace" font-weight="600" font-size="' + (fs * 0.8).toFixed(1) + '" fill="' + col + '">' + lab(gi, i) + '</text>';
+      });
+    });
+    return s + '</svg>';
+  }
+  function issueText(x) {
+    var d = x.id === 'load' ? 0 : 1, o = { b: x.bend == null ? '' : lab(x.g || 0, x.bend), V: ev.di.V }, z = /Angle|Len|Open/.test(x.id) ? 0 : d;
+    if (x.v != null) o.v = nf(x.v, z); if (x.r != null) o.r = nf(x.r, z); if (x.hi != null) o.hi = nf(x.hi, 1); if (x.n != null) o.n = x.n; if (x.tool) o.tool = x.tool; if (x.id === 'hits') o.r = x.r;
+    return t(x.id, o);
+  }
+  function toolThumb(tl) {
+    var b = P.bbox(tl.pts), pad = 2;
+    return '<svg viewBox="' + (b[0] - pad) + ' ' + (-b[3] - pad) + ' ' + (b[2] - b[0] + 2 * pad) + ' ' + (b[3] - b[1] + 2 * pad) + '" role="img" aria-label="' + esc(tl.name) + '"><path d="' + path(tl.pts, function (x) { return x.toFixed(2); }, function (y) { return (-y).toFixed(2); }) + '" fill="var(--tool)" stroke="var(--ink)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>';
+  }
+  function tf(tl, f, label, text) { var id = 't-' + tl.id + '-' + f; return '<label for="' + id + '">' + esc(label) + '<input id="' + id + '" type="' + (text ? 'text' : 'number') + '"' + (text ? '' : ' inputmode="decimal" min="0" step="any"') + ' data-tool="' + esc(tl.id) + '" data-tf="' + f + '" value="' + esc(tl[f] == null ? (text ? '' : 0) : tl[f]) + '"></label>'; }
+  function toolCard(tl) {
+    var f = tl.kind === 'punch' ? tf(tl, 'angle', t('fAngle')) + tf(tl, 'radius', t('fRad')) + tf(tl, 'maxLoad', t('fLoad')) + tf(tl, 'length', t('fLen'))
+      : tf(tl, 'angle', t('fAngle')) + tf(tl, 'maxLoad', t('fLoad')) + tf(tl, 'length', t('fLen')) + tf(tl, 'tMin', t('fTmin')) + tf(tl, 'tMax', t('fTmax'));
+    var vs = '';
+    if (tl.kind === 'die') vs = '<div class="vlist"><span class="mute" style="font-size:12px">' + t('vList') + '</span>' + P.dieVariants(tl).map(function (v) {
+      var id = 'vn-' + tl.id + '-' + v.key.replace(':', '_');
+      return '<div class="vrow"><span class="num">' + t('face', { r: v.rot }) + '</span><label for="' + id + '">' + t('vNom') + '<input id="' + id + '" type="number" inputmode="decimal" min="0" step="any" data-vn="' + esc(tl.id) + '" data-k="' + v.key + '" value="' + v.V + '"></label><label class="chk" for="' + id + 'u"><input type="checkbox" id="' + id + 'u" data-vu="' + esc(tl.id) + '" data-k="' + v.key + '"' + (v.use ? ' checked' : '') + '>' + t('vUse') + '</label></div>';
+    }).join('') + '</div>';
+    var sg = '<div>' + tf(tl, 'segs', t('fSegs'), true) + '</div>';
+    var b = P.bbox(tl.pts);
+    return '<article class="tool"><div class="thead"><div class="tthumb">' + toolThumb(tl) + '</div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">' + tf(tl, 'name', t('name'), true) + '<span class="mute num" style="font-size:12px">' + t('fH', { h: nf(b[3] - b[1], 1) }) + (tl.sample ? ' · <span class="tag">' + t('demoTag') + '</span>' : '') + '</span></div></div><div class="inputs">' + f + '</div>' + vs + sg + fitsRow(tl) + '<div class="actions"><button class="btn sm" type="button" data-flip="' + esc(tl.id) + '">' + t('flip') + '</button><button class="btn sm" type="button" data-mir="' + esc(tl.id) + '">' + t('mirror') + '</button><button class="btn sm" type="button" data-del="' + esc(tl.id) + '">' + t('del') + '</button></div></article>';
+  }
+  function fitsRow(tl) {
+    var ms = tools('machine'); if (!ms.length) return '';
+    return '<div class="fits"><span class="mute">' + t('fits') + '</span>' + ms.map(function (m) { var id = 'fit-' + tl.id + '-' + m.id; return '<label class="chk" for="' + id + '"><input type="checkbox" id="' + id + '" data-fit="' + esc(tl.id) + '" data-m="' + esc(m.id) + '"' + (tl.fits && tl.fits.indexOf(m.id) >= 0 ? ' checked' : '') + '>' + esc(m.name) + '</label>'; }).join('') + '</div>';
+  }
+  function machineCard(m) {
+    var np = 0, nd = 0; lib.forEach(function (x) { if (x.fits && x.fits.indexOf(m.id) >= 0) { if (x.kind === 'punch') np++; else if (x.kind === 'die') nd++; } });
+    return '<article class="tool">' + tf(m, 'name', t('name'), true) + '<div class="inputs">' + tf(m, 'tons', t('fTons')) + tf(m, 'length', t('fMLen')) + tf(m, 'open', t('fOpen')) + tf(m, 'clamp', t('fClamp'), true) + tf(m, 'ramW', t('fRamW')) + tf(m, 'hW', t('fHW')) + tf(m, 'hH', t('fHH')) + tf(m, 'tableW', t('fTabW')) + tf(m, 'gMin', t('fGMin')) + tf(m, 'gMax', t('fGMax')) + '</div><p class="mute" style="font-size:12px">' + t('zero') + '</p><div class="actions" style="align-items:center"><span class="mute num" style="font-size:12px;flex:1">' + t('nTools', { p: np, d: nd }) + (m.sample ? ' · <span class="tag">' + t('demoTag') + '</span>' : '') + '</span><button class="btn sm" type="button" data-del="' + esc(m.id) + '">' + t('del') + '</button></div></article>';
+  }
+  function libView() {
+    return '<p class="mute" style="max-width:70ch;font-size:13px">' + t('libNote') + '</p>' +
+      '<section><h2>' + t('machines') + '</h2>' + tools('machine').map(machineCard).join('') + '<div><button class="btn pri" type="button" data-act="addM">' + t('addM') + '</button></div></section>' +
+      '<section><h2>' + t('punches') + '</h2>' + tools('punch').map(toolCard).join('') + '<div><input class="hid" type="file" id="fPunch" accept=".dxf,.DXF" multiple><label class="btn pri" for="fPunch">' + t('addP') + '</label></div></section>' +
+      '<section><h2>' + t('dies') + '</h2>' + tools('die').map(toolCard).join('') + '<div><input class="hid" type="file" id="fDie" accept=".dxf,.DXF" multiple><label class="btn pri" for="fDie">' + t('addD') + '</label></div></section>' +
+      '<div class="actions"><button class="btn" type="button" data-act="exp">' + t('exp') + '</button><input class="hid" type="file" id="fLib" accept=".json,application/json"><label class="btn" for="fLib">' + t('imp') + '</label><button class="btn" type="button" data-act="demo">' + t(EMB ? 'restore' : 'demo') + '</button></div>';
+  }
+  function bendTable() {
+    var man = part.mode === 'manual', g = man ? null : part.groups[part.gi], legs = man ? part.out : g ? g.legs : [], bends = man ? part.bends : g ? g.bends : [];
+    var h = '<div class="tw"><table><tr><th>#</th><th>' + t(man ? 'legOut' : 'legFlat') + '</th><th>' + t('ang') + '</th><th>' + t('dir') + '</th></tr>';
+    legs.forEach(function (l, i) {
+      var b = bends[i];
+      h += '<tr><td class="num">' + (b && !man ? lab(part.gi, i) : i + 1) + '</td><td>' + (man ? '<input id="leg-' + i + '" aria-label="' + t('leg') + ' ' + (i + 1) + '" type="number" inputmode="decimal" min="0" step="any" data-leg="' + i + '" value="' + l + '">' : '<span class="num">' + nf(l, 1) + '</span>') + '</td>' +
+        (b ? '<td><input id="bg-' + i + '" aria-label="' + t('ang') + ' ' + (i + 1) + '" type="number" inputmode="decimal" min="1" max="179" step="any" data-bg="' + i + '" value="' + b.gamma + '"></td><td><select id="bd-' + i + '" aria-label="' + t('dir') + ' ' + (i + 1) + '" data-bd="' + i + '">' + opt(1, t('up'), b.dir) + opt(-1, t('down'), b.dir) + '</select></td>' : '<td></td><td></td>') + '</tr>';
+    });
+    h += '</table></div><p class="mute" style="font-size:12px">' + t('after') + '</p>';
+    if (man) h += '<div class="actions"><button class="btn sm" type="button" data-act="addB">' + t('addB') + '</button>' + (part.bends.length > 1 ? '<button class="btn sm" type="button" data-act="delB">' + t('delB') + '</button>' : '') + '</div>';
+    return h;
+  }
+  function checkView() {
+    var pu = avail('punch'), di = dieOpts(), ms = tools('machine');
+    var h = '<section class="drop" id="drop"><input type="file" id="fPart" accept=".dxf,.DXF"><label class="btn pri" for="fPart">' + t('dxf') + '</label><button class="btn" type="button" data-act="manual">' + t('manual') + '</button><button class="btn" type="button" data-act="sample">' + t('sample') + '</button></section>';
+    h += msgs.map(function (m) { return '<p class="msg">' + esc(m) + '</p>'; }).join('');
+    var msel = ms.length ? '<label for="i-m">' + t('machine') + '<select id="i-m" data-s="machine">' + opt('', t('anyM'), selM) + ms.map(function (x) { return opt(x.id, x.name, selM); }).join('') + '</select></label>' : '';
+    if (!pu.length || !di.length) return h + (selM ? '<div class="inputs">' + msel + '</div>' : '') + '<p class="msg">' + t(selM ? 'noFit' : 'noTool') + '</p>';
+    h += '<div class="inputs">' + msel + '<label for="i-t">' + t('thk') + '<input id="i-t" type="number" inputmode="decimal" min="0" step="any" data-f="t" value="' + part.t + '"></label><label for="i-mat">' + t('mat') + '<select id="i-mat" data-s="mat">' + MATS.map(function (m, i) { return opt(i, m.name, part.mat); }).join('') + '</select></label>' +
+      '<label for="i-p">' + t('punch') + '<select id="i-p" data-s="punch">' + pu.map(function (x) { return opt(x.id, x.name, selP); }).join('') + '</select></label><label for="i-d">' + t('die') + '<select id="i-d" data-s="die">' + di.map(function (x) { return opt(x.val, x.label, selD); }).join('') + '</select></label>' +
+      (part.mode === 'manual' ? '<label for="i-bl">' + t('blen') + '<input id="i-bl" type="number" inputmode="decimal" min="0" step="any" data-f="blen" value="' + part.blen + '"></label>' : '') +
+      (part.mode === 'dxf' && part.groups.length > 1 ? '<label for="i-g">' + t('dirG') + '<select id="i-g" data-s="group">' + part.groups.map(function (g, i) { return opt(i, 'ABCDEF'.charAt(i) + ' · ' + nf(g.angDeg, 0) + '° · ' + g.bends.length, part.gi); }).join('') + '</select></label>' : '') + '</div>';
+    if (part.mode === 'dxf' && !part.groups.length) h += '<p class="msg">' + t('noBend') + '</p>'; else h += (part.mode === 'dxf' ? '<div class="draw" id="plan">' + planSvg() + '</div>' : '') + bendTable();
+    h += '<div id="out" style="display:flex;flex-direction:column;gap:16px"></div>';
+    if (part.mode === 'dxf') h += '<details id="dLay"' + (open.dLay ? ' open' : '') + '><summary>' + t('layers') + ' (' + Object.keys(part.roles).length + ')</summary><div class="din"><div class="inputs">' + Object.keys(part.roles).map(function (l, k) { return '<label for="r-' + k + '" class="num">' + esc(l) + '<select id="r-' + k + '" data-role="' + esc(l) + '">' + opt('cut', t('rCut'), part.roles[l]) + opt('bend', t('rBend'), part.roles[l]) + opt('ignore', t('rIgn'), part.roles[l]) + '</select></label>'; }).join('') + '</div></div></details>';
+    h += '<details id="dHow"' + (open.dHow ? ' open' : '') + '><summary>' + t('how') + '</summary><div class="din"><ul><li>' + t('h1') + '</li><li>' + t('h2') + '</li><li>' + t('h3') + '</li><li>' + t('h5') + '</li><li>' + t('h6') + '</li><li>' + t('h7') + '</li><li>' + t('h4') + '</li></ul></div></details>';
+    return h;
+  }
+  function render() {
+    document.documentElement.lang = lang;
+    var h = '<header class="top"><div><h1>' + t('title') + '</h1><p class="mute">' + t('sub') + '</p></div><div class="langs" role="group" aria-label="Language">' + LANGS.map(function (l) { return '<button type="button" data-lang="' + l + '" aria-pressed="' + (l === lang) + '">' + l.toUpperCase() + '</button>'; }).join('') + '</div></header>';
+    h += '<nav class="views"><button type="button" data-view="check" aria-pressed="' + (view === 'check') + '">' + t('vCheck') + '</button><button type="button" data-view="lib" aria-pressed="' + (view === 'lib') + '">' + t('vLib') + '</button></nav>';
+    h += view === 'lib' ? msgs.map(function (m) { return '<p class="msg">' + esc(m) + '</p>'; }).join('') + libView() : checkView();
+    document.getElementById('app').innerHTML = h;
+    if (view === 'check') update();
+  }
+  function update() {
+    var el = document.getElementById('out'); if (!el) return; evaluate();
+    if (!ev) { var dd = dieOpts().filter(function (x) { return x.val === selD; })[0]; el.innerHTML = dd && !(dd.v.V > 0) ? '<p class="msg">' + t('noV') + '</p>' : ''; return; }
+    var n = ev.issues.length, G = ev.groups[part.gi], sq = G.seq;
+    if (!userStep) { si = 0; prog = 1; for (var fi = 0; fi < sq.steps.length; fi++) if (!sq.steps[fi].ok) { si = fi; prog = sq.steps[fi].prog == null ? 1 : sq.steps[fi].prog; break; } }
+    var sd = (part.sides && part.sides[part.gi]) || {};
+    var st = sq.steps[si], why = st && !st.ok ? ev.issues.filter(function (x) { return (x.g || 0) === part.gi && x.bend === st.k && /^(col|g[NLH])/.test(x.id); })[0] : null;
+    var h = '<div class="verdict ' + (ev.ok ? 'ok' : 'bad') + '"><b>' + (ev.ok ? '✓ ' + t('ok') : '✕ ' + t('bad')) + '</b><span>' + (ev.ok ? '' : (n === 1 ? t('nProb1') : t('nProb', { n: n })) + ' · ') + esc(ev.pu.name) + ' + ' + esc(ev.di.name) + '</span></div>';
+    if (ev.order) h += '<p class="mute" style="font-size:13px">' + t('order', { x: 'ABCDEF'.charAt(ev.order[0]), y: 'ABCDEF'.charAt(ev.order[1]) }) + '</p>';
+    h += '<section><h2>' + t('seq') + (ev.groups.length > 1 ? ' ' + 'ABCDEF'.charAt(part.gi) : '') + '</h2><div class="steps">' + sq.steps.map(function (s, i) { return '<button type="button" data-step="' + i + '" class="' + (s.ok ? '' : 'bad') + '" aria-pressed="' + (i === si) + '">' + (i + 1) + ' · ' + t('bendN', { n: lab(part.gi, s.k) }) + (s.mirror ? ' ↔' : '') + (s.ok ? '' : ' ✕') + '</button>'; }).join('') + '</div>' +
+      (sq.manual ? '<div class="tw"><table>' + sq.steps.map(function (s, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + t('bendN', { n: lab(part.gi, s.k) }) + (s.ok ? '' : ' ✕') + '</td><td><select id="gs-' + i + '" aria-label="' + t('gSel') + '" data-gs="' + s.k + '">' + opt('', t('gAuto'), sd[s.k] || '') + opt('b', t('gOn', { n: s.k + 1, l: nf(G.S.legs[s.k], 0) }), sd[s.k] || '') + opt('a', t('gOn', { n: s.k + 2, l: nf(G.S.legs[s.k + 1], 0) }), sd[s.k] || '') + '</select></td><td class="n"><button class="btn sm" type="button" data-mv=""' + i + '" data-by="-1"' + (i ? '' : ' disabled') + ' aria-label="' + t('earlier') + '">↑</button> <button class="btn sm" type="button" data-mv="' + i + '" data-by="1"' + (i < sq.steps.length - 1 ? '' : ' disabled') + ' aria-label="' + t('later') + '">↓</button></td></tr>'; }).join('') + '</table></div>' : '') +
+      (sq.steps.length > 1 ? '<div class="actions"><button class="btn sm" type="button" data-act="' + (sq.manual ? 'seqAuto' : 'seqSet') + '">' + t(sq.manual ? 'autoSeq' : 'setSeq') + '</button></div>' : '') +
+      '<p class="mute" style="font-size:12px">' + (sq.manual ? t('seqMan') : sq.ok && sq.searched ? t('seqAuto') : !sq.ok && sq.searched ? t('seqNone') : !sq.searched ? t('seqList') : '') + (sq.steps.some(function (s) { return s.mirror; }) ? ' · ↔ = ' + t('turned') : '') + (st && st.G > 0 ? ' · ' + t('gaugeAt', { g: nf(st.G, 1) }) : '') + '</p>' + (why ? '<p class="msg">' + esc(issueText(why)) + (st.other ? ' ' + t('gSide') : '') + '</p>' : '') + (!sq.ok ? '<p class="mute" style="font-size:13px;max-width:70ch">' + t('dirHint') + '</p>' : '') + '</section>';
+    h += '<div class="draw" id="sim"></div><div class="actions"><button class="btn sm" type="button" data-act="zoom">' + t(fit ? 'zoomT' : 'zoomP') + '</button></div><label for="i-prog">' + t('prog') + '<input id="i-prog" type="range" min="0" max="100" step="1" value="' + Math.round(prog * 100) + '" data-prog="1"></label>';
+    h += '<p class="mute num" style="font-size:13px">' + t('info', { r: nf(ev.r, 1), f: nf(ev.loadPerM, 0), bd: nf(P.bendDeduction(Math.PI / 2, part.t, ev.r, K), 2) }) + ' · ' + t('force', { f: nf(ev.fmax, 1) }) + '</p>';
+    if (n) h += '<section><h2>' + t('found') + '</h2><ol class="issues">' + ev.issues.map(function (x, i) { return '<li><span class="no">' + (i + 1) + '</span><span>' + esc(issueText(x)) + '</span></li>'; }).join('') + '</ol></section>';
+    if (ev.notes.length) h += '<section><h2>' + t('notes') + '</h2><ol class="issues notes">' + ev.notes.map(function (x) { return '<li><span>' + esc(issueText(x)) + '</span></li>'; }).join('') + '</ol></section>';
+    h += '<details id="dBox"' + (open.dBox ? ' open' : '') + '><summary>' + t('boxT') + '</summary><div class="din"><label class="chk" for="c-gShort"><input type="checkbox" id="c-gShort" data-cfgb="gShort"' + (cfg.gShort ? ' checked' : '') + '>' + t('cGShort') + '</label><div class="inputs">' + [['boxCl', 'cCl'], ['boxTol', 'cTol'], ['maxHits', 'cHits']].map(function (c) { return '<label for="c-' + c[0] + '">' + t(c[1]) + '<input id="c-' + c[0] + '" type="number" inputmode="decimal" min="0" step="any" data-cfg="' + c[0] + '" value="' + cfg[c[0]] + '"></label>'; }).join('') + '</div></div></details>';
+    el.innerHTML = h; document.getElementById('sim').innerHTML = simSvg();
+  }
+
+  function saveFile(name, data, mime) {
+    var blob = new Blob([data], { type: mime });
+    var direct = function () { try { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { } };
+    if (window.claude && window.claude.use) window.claude.use('downloads').then(function (d) { if (d) return d.save({ filename: name, data: blob }).catch(function () { }); direct(); }, direct);
+    else direct();
+  }
+  function readAll(files, each, done) {
+    var list = [].slice.call(files), left = list.length; if (!left) return;
+    list.forEach(function (f) { var r = new FileReader(); r.onload = function () { each(f.name, String(r.result)); if (--left === 0) done(); }; r.onerror = function () { msgs.push(f.name + ': ' + t('errRead')); if (--left === 0) done(); }; r.readAsText(f); });
+  }
+  function addTool(kind, name, text) {
+    var pts;
+    try { pts = P.profileFromDXF(text); } catch (e) { msgs.push(name + ': ' + t(e.message === 'noprofile' ? 'errProf' : 'errRead')); return; }
+    var id = kind[0] + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4), nm = name.replace(/\.dxf$/i, '');
+    if (kind === 'punch') { var n = P.normPunch(pts); lib.push({ id: id, name: nm, kind: 'punch', pts: n.pts, angle: 88, radius: 0.8, maxLoad: 1000, length: 0, fits: tools('machine').map(function (m) { return m.id; }) }); selP = id; }
+    else { var d = P.normDie(pts); lib.push({ id: id, name: nm, kind: 'die', pts: d.pts, V: d.V, angle: 88, maxLoad: 1000, length: 0, tMin: 0, tMax: 0, fits: tools('machine').map(function (m) { return m.id; }) }); selD = id; }
+    fixSel();
+  }
+  function fixSel() {
+    if (selM && !byId(selM)) selM = '';
+    var ap = avail('punch');
+    if (!ap.some(function (x) { return x.id === selP; })) selP = (ap[0] || {}).id;
+    var od = dieOpts(); if (!od.some(function (x) { return x.val === selD; })) selD = ((od.filter(function (x) { return x.die.id === String(selD).split('|')[0]; })[0] || od[0]) || {}).val;
+  }
+  function renorm(tl) { if (tl.kind === 'punch') tl.pts = P.normPunch(tl.pts).pts; else { var d = P.normDie(tl.pts); tl.pts = d.pts; if (d.V) tl.V = d.V; } }
+
+  var app = document.getElementById('app');
+  app.addEventListener('input', function (e) {
+    var el = e.target, d = el.dataset;
+    if (!d.prog) userStep = false;
+    if (d.prog) { prog = +el.value / 100; var s = document.getElementById('sim'); if (s) s.innerHTML = simSvg(); return; }
+    if (d.cfg) { var cv = num(el.value); cfg[d.cfg] = d.cfg === 'maxHits' ? Math.max(1, Math.round(cv)) : cv; save('pb.cfg', cfg); return; }
+    if (d.vn) { var dv = byId(d.vn); if (dv) { dv.vnom = dv.vnom || {}; dv.vnom[d.k] = num(el.value); saveLib(); } return; }
+    if (d.tool) { var tl = byId(d.tool); if (tl) { tl[d.tf] = d.tf === 'name' || d.tf === 'clamp' || d.tf === 'segs' ? el.value : num(el.value); saveLib(); } return; }
+    if (d.f) { var v = num(el.value); if (!(v > 0)) return; part[d.f] = v; update(); return; }
+    if (d.leg) { var l = num(el.value); if (!(l > 0)) return; part.out[+d.leg] = l; update(); return; }
+    if (d.bg) { var g = num(el.value); if (!(g >= 1 && g <= 179)) return; (part.mode === 'manual' ? part.bends : part.groups[part.gi].bends)[+d.bg].gamma = g; update(); }
+  });
+  app.addEventListener('change', function (e) {
+    var el = e.target, d = el.dataset; if (!d.prog) userStep = false;
+    if (el.id === 'fPart') { msgs = []; readAll(el.files, function (name, text) {
+      try { var x = Q.readDXF(text), roles = {}; x.pieces.forEach(function (p) { if (!(p.layer in roles)) roles[p.layer] = Q.defaultRole(p.layer); });
+        var m = /(\d+(?:[.,]\d+)?)\s*mm/i.exec(name), th = m ? num(m[1]) : 0;
+        part = { mode: 'dxf', name: name, t: th > 0 && th <= 30 ? th : part.t, mat: part.mat, pieces: x.pieces, roles: roles, groups: P.partFromFlat(x.pieces, roles), gi: 0 }; si = 0; prog = 1;
+      } catch (err) { msgs.push(name + ': ' + t('errRead')); } }, render); return; }
+    if (el.id === 'fPunch' || el.id === 'fDie') { msgs = []; var kind = el.id === 'fPunch' ? 'punch' : 'die'; readAll(el.files, function (n, x) { addTool(kind, n, x); }, function () { saveLib(); render(); }); return; }
+    if (el.id === 'fLib') { msgs = []; readAll(el.files, function (n, x) { try { var a = JSON.parse(x); a = Array.isArray(a) ? a : a.tools; var okc = 0; a.forEach(function (tl) { if (tl && (tl.kind === 'machine' || ((tl.kind === 'punch' || tl.kind === 'die') && Array.isArray(tl.pts) && tl.pts.length > 2))) { tl.id = tl.id && !byId(tl.id) ? String(tl.id) : tl.kind[0] + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); tl.name = String(tl.name || tl.id); lib.push(tl); okc++; } }); if (!okc) throw 0; } catch (err) { msgs.push(n + ': ' + t('errLib')); } }, function () { fixSel(); saveLib(); render(); }); return; }
+    if (d.cfgb) { cfg[d.cfgb] = el.checked ? 1 : 0; save('pb.cfg', cfg); update(); return; }
+    if (d.cfg) { update(); return; }
+    if (d.fit) { var ft = byId(d.fit); if (ft) { ft.fits = (ft.fits || []).filter(function (x) { return x !== d.m; }); if (el.checked) ft.fits.push(d.m); saveLib(); render(); } return; }
+    if (d.vu) { var du = byId(d.vu); if (du) { du.vuse = du.vuse || {}; du.vuse[d.k] = el.checked; fixSel(); saveLib(); } return; }
+    if (d.s === 'machine') { selM = el.value; fixSel(); si = 0; render(); return; }
+    if (d.s === 'mat') { part.mat = +el.value; update(); }
+    else if (d.s === 'punch') { selP = el.value; si = 0; update(); }
+    else if (d.s === 'die') { selD = el.value; si = 0; update(); }
+    else if (d.gs) { part.sides = part.sides || {}; part.sides[part.gi] = part.sides[part.gi] || {}; part.sides[part.gi][d.gs] = el.value; for (var q = 0; q < ev.groups[part.gi].seq.steps.length; q++) if (String(ev.groups[part.gi].seq.steps[q].k) === d.gs) si = q; userStep = true; prog = 1; update(); return; }
+    else if (d.s === 'group') { part.gi = +el.value; si = 0; prog = 1; render(); }
+    else if (d.bd) { (part.mode === 'manual' ? part.bends : part.groups[part.gi].bends)[+d.bd].dir = +el.value; si = 0; update(); }
+    else if (d.role) { part.roles[d.role] = el.value; part.groups = P.partFromFlat(part.pieces, part.roles); part.gi = 0; si = 0; open.dLay = true; render(); }
+  });
+  app.addEventListener('toggle', function (e) { if (e.target.id) open[e.target.id] = e.target.open; }, true);
+  app.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return; var d = b.dataset, tl;
+    if (d.lang) { lang = d.lang; save('pb.lang', lang); render(); }
+    else if (d.view) { view = d.view; msgs = []; render(); }
+    else if (d.step) { si = +d.step; userStep = true; var ss = ev && ev.groups[part.gi].seq.steps[si]; prog = ss && !ss.ok && ss.prog != null ? ss.prog : 1; update(); }
+    else if (d.act === 'seqSet') { part.orders = part.orders || {}; part.orders[part.gi] = ev.groups[part.gi].seq.steps.map(function (s) { return s.k; }); userStep = true; update(); }
+    else if (d.act === 'seqAuto') { part.orders[part.gi] = null; if (part.sides) part.sides[part.gi] = null; userStep = false; update(); }
+    else if (d.mv) { var o = part.orders[part.gi], i0 = +d.mv, i1 = i0 + (+d.by); if (o && i1 >= 0 && i1 < o.length) { var tmp = o[i0]; o[i0] = o[i1]; o[i1] = tmp; si = i1; userStep = true; prog = 1; update(); } }
+    else if (d.act === 'zoom') { fit = !fit; update(); }
+    else if (d.act === 'sample') { msgs = []; samplePart(); render(); }
+    else if (d.act === 'manual') { msgs = []; if (part.mode !== 'manual') part = { mode: 'manual', name: '', t: part.t, mat: part.mat, out: [30, 50], bends: [{ gamma: 90, dir: 1 }], blen: 500 }; si = 0; render(); }
+    else if (d.act === 'addB') { part.out.push(30); part.bends.push({ gamma: 90, dir: 1 }); render(); }
+    else if (d.act === 'delB') { part.out.pop(); part.bends.pop(); si = 0; render(); }
+    else if (d.flip && (tl = byId(d.flip))) { tl.pts = tl.pts.map(function (p) { return [p[0], -p[1]]; }); renorm(tl); saveLib(); render(); }
+    else if (d.mir && (tl = byId(d.mir))) { tl.pts = tl.pts.map(function (p) { return [-p[0], p[1]]; }); renorm(tl); saveLib(); render(); }
+    else if (d.del) { lib = lib.filter(function (x) { return x.id !== d.del; }); lib.forEach(function (x) { if (x.fits) x.fits = x.fits.filter(function (m) { return m !== d.del; }); }); fixSel(); saveLib(); render(); }
+    else if (d.act === 'addM') { lib.push({ id: 'm-' + Date.now().toString(36), name: t('newM'), kind: 'machine', tons: 100, length: 3000, open: 0, clamp: '' }); saveLib(); render(); }
+    else if (d.act === 'exp') saveFile('tool-library.json', JSON.stringify({ tools: lib }, null, 1), 'application/json');
+    else if (d.act === 'demo') { if (EMB) lib = builtIn(); else P.demoLib().forEach(function (x) { if (!byId(x.id)) lib.push(x); }); fixSel(); saveLib(); render(); }
+  });
+
+  var EMB = window.PB_LIBRARY && Array.isArray(window.PB_LIBRARY.tools) && window.PB_LIBRARY.tools.length ? window.PB_LIBRARY : null, LIBV = EMB ? String(EMB.v) : 'demo';
+  function builtIn() { return EMB ? JSON.parse(JSON.stringify(EMB.tools)) : P.demoLib(); }
+  var st = load('pb.lib'), sv = load('pb.libv'); lib = Array.isArray(st) && st.length && (sv == null || sv === LIBV) && !(EMB && sv == null) ? st : builtIn();
+  var sc = load('pb.cfg'); if (sc) Object.keys(cfg).forEach(function (k) { if (typeof sc[k] === 'number') cfg[k] = sc[k]; });
+  var nl = (navigator.language || 'en').slice(0, 2); lang = load('pb.lang'); if (LANGS.indexOf(lang) < 0) lang = LANGS.indexOf(nl) >= 0 ? nl : 'en';
+  selP = 'p-straight'; selD = 'd-v12'; selM = byId('m-100') ? 'm-100' : (tools('machine')[0] || {}).id || ''; fixSel(); samplePart(); render();
+})();
+</script>
+</body>
+</html>
