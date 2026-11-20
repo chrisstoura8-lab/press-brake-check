@@ -783,19 +783,74 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     if (second.ok) return pack(second);
     return pack(/^g/.test(first.tool) && !/^g/.test(second.tool) ? second : first);
   }
+  /* handling cost of a step after the previous one: turning the part front/back (mirror) and upside down (bend direction) */
+  var COST = { turn: 2, flip: 3, gauge: 1 / 400 };
+  function stepCost(prev, r, sg) {
+    var c = r.G > 0 ? r.G * COST.gauge : 0;
+    if (prev) { if (prev.mirror !== r.mirror) c += COST.turn; if (prev.sg !== sg) c += COST.flip; }
+    return c;
+  }
+  function sideOf(S, k, mirror) { return (S.sgn[k] > 0) === mirror ? 'a' : 'b'; }
+  /* auto: try every collision-free order (n<=7), choose for each the best part handling, rank by handling cost */
   function sequence(S, auto, order, sides) {
-    var n = S.target.length, memo = {}, dead = {};
-    function res(mask, k, side) { var key = mask + ':' + k + ':' + (side || ''); if (!memo[key]) { var done = []; for (var j = 0; j < n; j++) done.push(!!(mask >> j & 1)); memo[key] = stepResult(S, done, k, side); } return memo[key]; }
-    function dfs(mask) {
-      if (mask === (1 << n) - 1) return []; if (dead[mask]) return null;
-      for (var k = 0; k < n; k++) { if (mask >> k & 1) continue; var r = res(mask, k); if (r.ok) { var rest = dfs(mask | 1 << k); if (rest) return [r].concat(rest); } }
-      dead[mask] = 1; return null;
+    var n = S.target.length, memo = {}, om = {}, dead = {};
+    function doneOf(mask) { var d = []; for (var j = 0; j < n; j++) d.push(!!(mask >> j & 1)); return d; }
+    function res(mask, k, side) { var key = mask + ':' + k + ':' + (side || ''); if (!memo[key]) memo[key] = stepResult(S, doneOf(mask), k, side); return memo[key]; }
+    /* feasible ways to do bend k now: with the short-side rule only the closer gauge, otherwise either orientation */
+    function opts(mask, k) {
+      var key = mask + ':' + k; if (om[key]) return om[key];
+      var o = [];
+      if (S.env && S.env.gShort) { var r = res(mask, k); if (r.ok) o.push(r); }
+      else ['a', 'b'].forEach(function (sd) { var r = res(mask, k, sd); if (r.ok) o.push(Object.assign({}, r, { forced: false })); });
+      return (om[key] = o);
+    }
+    function score(steps) {
+      var c = 0, turns = 0, flips = 0, gmax = 0, prev = null;
+      steps.forEach(function (r) { var sg = S.sgn[r.k]; if (prev) { if (prev.mirror !== r.mirror) turns++; if (prev.sg !== sg) flips++; } if (r.G > gmax) gmax = r.G; c += stepCost(prev, r, sg); prev = { mirror: r.mirror, sg: sg }; });
+      return { cost: c, turns: turns, flips: flips, gmax: gmax };
+    }
+    /* best orientation per step along a fixed order (small DP over the options) */
+    function bestFor(ord) {
+      var mask = 0, layer = [{ c: 0, path: [] }];
+      for (var i = 0; i < ord.length; i++) {
+        var k = ord[i], os = opts(mask, k), nx = [];
+        os.forEach(function (r) { var best = null; layer.forEach(function (L) { var p = L.path[L.path.length - 1], c = L.c + stepCost(p ? { mirror: p.mirror, sg: S.sgn[p.k] } : null, r, S.sgn[k]); if (!best || c < best.c) best = { c: c, path: L.path.concat([r]) }; }); if (best) nx.push(best); });
+        if (!nx.length) return null; layer = nx; mask |= 1 << k;
+      }
+      return layer.reduce(function (a, b) { return b.c < a.c ? b : a; }).path;
+    }
+    function feasible(mask) {
+      if (mask === (1 << n) - 1) return true; if (mask in dead) return dead[mask];
+      var ok = false; for (var k = 0; k < n && !ok; k++) if (!(mask >> k & 1) && opts(mask, k).length && feasible(mask | 1 << k)) ok = true;
+      return (dead[mask] = ok);
     }
     var manual = order && order.length === n;
-    if (!manual && auto && n <= 7) { var f = dfs(0); if (f) return { steps: f, ok: true, searched: true }; }
+    if (!manual && auto && n <= 7 && feasible(0)) {
+      var orders = [], cur = [];
+      (function walk(mask) {
+        if (orders.length >= 5040) return;
+        if (mask === (1 << n) - 1) { orders.push(cur.slice()); return; }
+        for (var k = 0; k < n; k++) if (!(mask >> k & 1) && opts(mask, k).length && feasible(mask | 1 << k)) { cur.push(k); walk(mask | 1 << k); cur.pop(); }
+      })(0);
+      var ranked = orders.map(function (o) { var p = bestFor(o); return p ? { steps: p, sc: score(p) } : null; }).filter(Boolean);
+      ranked.sort(function (a, b) { return a.sc.cost - b.sc.cost; });
+      var alts = ranked.slice(0, 4).map(function (x) { return { order: x.steps.map(function (r) { return r.k; }), sides: x.steps.reduce(function (m, r) { m[r.k] = sideOf(S, r.k, r.mirror); return m; }, {}), turns: x.sc.turns, flips: x.sc.flips, gmax: x.sc.gmax, cost: x.sc.cost }; });
+      var b = ranked[0];
+      return { steps: b.steps, ok: true, searched: true, best: true, nFeasible: ranked.length, score: b.sc, alts: alts };
+    }
+    if (!manual && auto && n > 7) {
+      /* too many bends to try them all: greedy, cheapest next step that still leaves a way forward */
+      var gs = [], gm = 0, prev = null;
+      while (gm !== (1 << n) - 1) {
+        var pick = null;
+        for (var k2 = 0; k2 < n; k2++) { if (gm >> k2 & 1) continue; opts(gm, k2).forEach(function (r) { var c = stepCost(prev, r, S.sgn[k2]); if (!pick || c < pick.c) pick = { c: c, r: r }; }); }
+        if (!pick) break; gs.push(pick.r); gm |= 1 << pick.r.k; prev = { mirror: pick.r.mirror, sg: S.sgn[pick.r.k] };
+      }
+      if (gm === (1 << n) - 1) return { steps: gs, ok: true, searched: true, greedy: true, score: score(gs), alts: [] };
+    }
     var steps = [], mask = 0, ok = true;
     for (var i = 0; i < n; i++) { var k = manual ? order[i] : i, r = res(mask, k, manual && sides ? sides[k] : ''); steps.push(r); if (!r.ok) ok = false; mask |= 1 << k; }
-    return { steps: steps, ok: ok, searched: !manual && auto && n <= 7, manual: !!manual };
+    return { steps: steps, ok: ok, searched: !manual && auto, manual: !!manual, score: ok ? score(steps) : null, alts: [] };
   }
   /* S: {legs (flat), target (signed rad), sgn, t, r, K, punch, die, Rm, bendsInfo:[{gamma,len}]} */
   function rules(S) {
@@ -818,7 +873,7 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     });
     return { issues: out, loadPerM: f };
   }
-  G.PB = { dieVariants: dieVariants, walls: walls, parseSegs: parseSegs, bestSum: bestSum, gauge: gauge, profileFromDXF: profileFromDXF, normPunch: normPunch, normDie: normDie, demoLib: demoLib, partFromFlat: partFromFlat, flatLegs: flatLegs, bendDeduction: bendDeduction, stage: stage, sequence: sequence, rules: rules, bbox: bbox, RAD: RAD };
+  G.PB = { dieVariants: dieVariants, walls: walls, parseSegs: parseSegs, bestSum: bestSum, gauge: gauge, profileFromDXF: profileFromDXF, normPunch: normPunch, normDie: normDie, demoLib: demoLib, partFromFlat: partFromFlat, flatLegs: flatLegs, bendDeduction: bendDeduction, stage: stage, sequence: sequence, sideOf: sideOf, rules: rules, bbox: bbox, RAD: RAD };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 (function () {
@@ -901,6 +956,10 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     gAuto: ['riscontro: automatico', 'gauge: automatic', 'οδηγός: αυτόματα'], gOn: ['riscontro sul lato del tratto {n} ({l} mm)', 'gauge on the side of leg {n} ({l} mm)', 'οδηγός στην πλευρά του φτερού {n} ({l} mm)'], gSel: ['Lato del riscontro', 'Gauge side', 'Πλευρά οδηγού'],
     earlier: ['prima', 'earlier', 'νωρίτερα'], later: ['dopo', 'later', 'αργότερα'],
     dirHint: ['Se in officina questo pezzo si fa, controlla il verso (su/giù) di ogni piega nella tabella: da un DXF senza layer di verso tutte le pieghe sono considerate «su». Puoi anche impostare tu la sequenza.', 'If this part is made in your shop, check the direction (up/down) of each bend in the table: from a DXF without direction layers every bend is taken as "up". You can also set the sequence yourself.', 'Αν το κομμάτι βγαίνει στην πράξη, έλεγξε τη φορά (πάνω/κάτω) κάθε στράντζας στον πίνακα: από DXF χωρίς layer φοράς όλες οι στράντζες θεωρούνται «πάνω». Μπορείς επίσης να ορίσεις εσύ τη σειρά.'],
+    seqBest: ['Sequenza migliore tra {n} senza collisioni', 'Best of {n} collision-free sequences', 'Βέλτιστη από {n} σειρές χωρίς σύγκρουση'], seqGreedy: ['Sequenza scelta passo per passo (troppe pieghe per provarle tutte)', 'Sequence chosen step by step (too many bends to try them all)', 'Σειρά επιλεγμένη βήμα-βήμα (πολλές στράντζες για να δοκιμαστούν όλες)'],
+    hand: ['{a} rotazioni · {b} capovolgimenti · registro max {g} mm', '{a} turns · {b} flips · max gauge {g} mm', '{a} γυρίσματα · {b} αναποδογυρίσματα · οδηγός έως {g} mm'],
+    altT: ['Alternative', 'Alternatives', 'Εναλλακτικές σειρές'], altNow: ['in uso', 'in use', 'σε χρήση'], altUse: ['Usa', 'Use', 'Χρήση'],
+    handS: ['{a} rot. · {b} capov.', '{a} turns · {b} flips', '{a} γυρ. · {b} αναποδ.'],
     suggest: ['Proponi una combinazione di utensili', 'Suggest a tooling combination', 'Πρότεινε συνδυασμό εργαλείων'], sugT: ['Combinazioni proposte', 'Suggested combinations', 'Προτεινόμενοι συνδυασμοί'],
     sugRun: ['Controllo {a} di {b}…', 'Checking {a} of {b}…', 'Έλεγχος {a} από {b}…'], sugPre: ['{n} combinazioni nella libreria, {m} superano i controlli di base, {k} provate in sequenza.', '{n} combinations in the library, {m} pass the basic checks, {k} tried in sequence.', '{n} συνδυασμοί στη βιβλιοθήκη, {m} περνούν τους βασικούς ελέγχους, {k} δοκιμάστηκαν σε σειρά πατημάτων.'],
     sugNone: ['Nessuna combinazione della libreria fa questo pezzo. Le più vicine:', 'No combination in the library makes this part. The closest ones:', 'Κανένας συνδυασμός της βιβλιοθήκης δεν βγάζει το κομμάτι. Οι πιο κοντινοί:'],
@@ -1002,7 +1061,8 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
       var cnt = function (l) { return l.filter(function (x) { return !x.note; }).length * 100 + l.length; }, a = box(0, 1), b2 = box(1, 0), pick = cnt(a) <= cnt(b2) ? a : b2;
       order = pick === a ? [0, 1] : [1, 0]; notes = pick.filter(function (x) { return x.note; }); issues = issues.concat(pick.filter(function (x) { return !x.note; }));
     }
-    return { groups: groups, issues: issues, notes: notes, ok: !issues.length, fmax: fmax, loadPerM: loadPerM, order: order, r: r, K: K, pu: pu, di: di };
+    var hand = { cost: 0, turns: 0, flips: 0 }; groups.forEach(function (g) { var sc = g.seq.score; if (sc) { hand.cost += sc.cost; hand.turns += sc.turns; hand.flips += sc.flips; } });
+    return { hand: hand, groups: groups, issues: issues, notes: notes, ok: !issues.length, fmax: fmax, loadPerM: loadPerM, order: order, r: r, K: K, pu: pu, di: di };
   }
   function evaluate() {
     ev = compute(byId(selP), activeDie(), byId(selM), true, false); if (!ev) return;
@@ -1026,9 +1086,9 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
       if (tok !== sugTok) return; var t0 = Date.now();
       while (sugg.done < work.length && Date.now() - t0 < 60) {
         var c = work[sugg.done++], e = compute(c.pu, c.di, c.m, false, false);
-        if (e) sugg.rows.push({ c: c, n: e.issues.length, notes: e.notes.length, fmax: e.fmax });
+        if (e) sugg.rows.push({ c: c, n: e.issues.length, notes: e.notes.length, fmax: e.fmax, hand: e.hand });
       }
-      if (sugg.done >= work.length) { sugg.running = false; sugg.rows.sort(function (a, b) { return a.n - b.n || a.notes - b.notes || a.c.score - b.c.score; }); }
+      if (sugg.done >= work.length) { sugg.running = false; sugg.rows.sort(function (a, b) { return a.n - b.n || a.notes - b.notes || a.hand.cost - b.hand.cost || a.c.score - b.c.score; }); }
       var el = document.getElementById('sugg'); if (el) el.innerHTML = suggHtml();
       if (sugg.running) setTimeout(step, 0);
     };
@@ -1036,14 +1096,14 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
   }
   function suggHtml() {
     if (!sugg) return '';
-    var h = '<section><h2>' + t('sugT') + '</h2>';
-    if (sugg.running) return h + '<p class="mute num">' + t('sugRun', { a: sugg.done, b: sugg.k }) + '</p></section>';
+    var h = '';
+    if (sugg.running) return '<p class="mute num">' + t('sugRun', { a: sugg.done, b: sugg.k }) + '</p>';
     var anyOk = sugg.rows.some(function (r) { return !r.n; });
     h += '<p class="mute" style="font-size:13px">' + t('sugPre', { n: sugg.total, m: sugg.pass, k: sugg.k }) + '</p>' + (anyOk ? '' : '<p class="msg">' + t('sugNone') + '</p>');
     h += '<div class="tw"><table>' + sugg.rows.slice(0, 8).map(function (r, i) {
       var c = r.c;
-      return '<tr><td>' + (r.n ? '<span class="pill bad">✕ ' + r.n + '</span>' : '<span class="pill ok">✓</span>') + '</td><td>' + (c.m ? esc(c.m.name) + '<br>' : '') + '<b>' + esc(c.pu.name) + '</b> + <b>' + esc(c.o.label) + '</b><br><span class="mute num" style="font-size:12px">V' + c.di.V + ' · ' + nf(r.fmax, 1) + ' t' + (r.notes ? ' · ' + t('hitsN', { n: r.notes }) : '') + (!r.n && i === 0 ? ' · ' + t('best') : '') + '</span></td><td class="n"><button class="btn sm" type="button" data-use="' + i + '">' + t('use') + '</button></td></tr>';
-    }).join('') + '</table></div></section>';
+      return '<tr><td>' + (r.n ? '<span class="pill bad">✕ ' + r.n + '</span>' : '<span class="pill ok">✓</span>') + '</td><td>' + (c.m ? esc(c.m.name) + '<br>' : '') + '<b>' + esc(c.pu.name) + '</b> + <b>' + esc(c.o.label) + '</b><br><span class="mute num" style="font-size:12px">V' + c.di.V + ' · ' + nf(r.fmax, 1) + ' t' + (r.notes ? ' · ' + t('hitsN', { n: r.notes }) : '') + (!r.n ? ' · ' + t('handS', { a: r.hand.turns, b: r.hand.flips }) : '') + (!r.n && i === 0 ? ' · ' + t('best') : '') + '</span></td><td class="n"><button class="btn sm" type="button" data-use="' + i + '">' + t('use') + '</button></td></tr>';
+    }).join('') + '</table></div>';
     return h;
   }
   function path(pts, X, Y) { var s = ''; for (var i = 0; i < pts.length; i++) s += (i ? 'L' : 'M') + X(pts[i][0]) + ' ' + Y(pts[i][1]); return s + 'Z'; }
@@ -1165,6 +1225,12 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     document.getElementById('app').innerHTML = h;
     if (view === 'check') update();
   }
+  function altHtml(sq) {
+    if (!sq.alts || sq.alts.length < 2) return '';
+    return '<details id="dAlt"' + (open.dAlt ? ' open' : '') + '><summary>' + t('altT') + '</summary><div class="tw"><table>' + sq.alts.map(function (a, i) {
+      return '<tr><td class="num">' + (i + 1) + '</td><td>' + a.order.map(function (k) { return lab(part.gi, k); }).join(' → ') + '<br><span class="mute num" style="font-size:12px">' + t('handS', { a: a.turns, b: a.flips }) + ' · ' + nf(a.gmax, 0) + ' mm</span></td><td class="n">' + (i === 0 ? '<span class="pill ok">' + t('altNow') + '</span>' : '<button class="btn sm" type="button" data-alt="' + i + '">' + t('altUse') + '</button>') + '</td></tr>';
+    }).join('') + '</table></div></details>';
+  }
   function update() {
     var el = document.getElementById('out'); if (!el) return; evaluate();
     if (!ev) { var dd = dieOpts().filter(function (x) { return x.val === selD; })[0]; el.innerHTML = dd && !(dd.v.V > 0) ? '<p class="msg">' + t('noV') + '</p>' : ''; return; }
@@ -1177,11 +1243,12 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     h += '<section><h2>' + t('seq') + (ev.groups.length > 1 ? ' ' + 'ABCDEF'.charAt(part.gi) : '') + '</h2><div class="steps">' + sq.steps.map(function (s, i) { return '<button type="button" data-step="' + i + '" class="' + (s.ok ? '' : 'bad') + '" aria-pressed="' + (i === si) + '">' + (i + 1) + ' · ' + t('bendN', { n: lab(part.gi, s.k) }) + (s.mirror ? ' ↔' : '') + (s.ok ? '' : ' ✕') + '</button>'; }).join('') + '</div>' +
       (sq.manual ? '<div class="tw"><table>' + sq.steps.map(function (s, i) { return '<tr><td class="num">' + (i + 1) + '</td><td>' + t('bendN', { n: lab(part.gi, s.k) }) + (s.ok ? '' : ' ✕') + '</td><td><select id="gs-' + i + '" aria-label="' + t('gSel') + '" data-gs="' + s.k + '">' + opt('', t('gAuto'), sd[s.k] || '') + opt('b', t('gOn', { n: s.k + 1, l: nf(G.S.legs[s.k], 0) }), sd[s.k] || '') + opt('a', t('gOn', { n: s.k + 2, l: nf(G.S.legs[s.k + 1], 0) }), sd[s.k] || '') + '</select></td><td class="n"><button class="btn sm" type="button" data-mv=""' + i + '" data-by="-1"' + (i ? '' : ' disabled') + ' aria-label="' + t('earlier') + '">↑</button> <button class="btn sm" type="button" data-mv="' + i + '" data-by="1"' + (i < sq.steps.length - 1 ? '' : ' disabled') + ' aria-label="' + t('later') + '">↓</button></td></tr>'; }).join('') + '</table></div>' : '') +
       (sq.steps.length > 1 ? '<div class="actions"><button class="btn sm" type="button" data-act="' + (sq.manual ? 'seqAuto' : 'seqSet') + '">' + t(sq.manual ? 'autoSeq' : 'setSeq') + '</button></div>' : '') +
-      '<p class="mute" style="font-size:12px">' + (sq.manual ? t('seqMan') : sq.ok && sq.searched ? t('seqAuto') : !sq.ok && sq.searched ? t('seqNone') : !sq.searched ? t('seqList') : '') + (sq.steps.some(function (s) { return s.mirror; }) ? ' · ↔ = ' + t('turned') : '') + (st && st.G > 0 ? ' · ' + t('gaugeAt', { g: nf(st.G, 1) }) : '') + '</p>' + (why ? '<p class="msg">' + esc(issueText(why)) + (st.other ? ' ' + t('gSide') : '') + '</p>' : '') + (!sq.ok ? '<p class="mute" style="font-size:13px;max-width:70ch">' + t('dirHint') + '</p>' : '') + '</section>';
+      '<p class="mute" style="font-size:12px">' + (sq.manual ? t('seqMan') : sq.best ? t('seqBest', { n: sq.nFeasible }) : sq.greedy ? t('seqGreedy') : sq.ok && sq.searched ? t('seqAuto') : !sq.ok && sq.searched ? t('seqNone') : !sq.searched ? t('seqList') : '') + (sq.steps.some(function (s) { return s.mirror; }) ? ' · ↔ = ' + t('turned') : '') + (st && st.G > 0 ? ' · ' + t('gaugeAt', { g: nf(st.G, 1) }) : '') + (sq.score ? '<br>' + t('hand', { a: sq.score.turns, b: sq.score.flips, g: nf(sq.score.gmax, 0) }) : '') + '</p>' + altHtml(sq) + (why ? '<p class="msg">' + esc(issueText(why)) + (st.other ? ' ' + t('gSide') : '') + '</p>' : '') + (!sq.ok ? '<p class="mute" style="font-size:13px;max-width:70ch">' + t('dirHint') + '</p>' : '') + '</section>';
     h += '<div class="draw" id="sim"></div><div class="actions"><button class="btn sm" type="button" data-act="zoom">' + t(fit ? 'zoomT' : 'zoomP') + '</button></div><label for="i-prog">' + t('prog') + '<input id="i-prog" type="range" min="0" max="100" step="1" value="' + Math.round(prog * 100) + '" data-prog="1"></label>';
     h += '<p class="mute num" style="font-size:13px">' + t('info', { u: UN(), r: nf(ev.r, 1), f: nf(fromKN(ev.loadPerM), cfg.unitK ? 0 : 1), bd: nf(P.bendDeduction(Math.PI / 2, part.t, ev.r, ev.K), 2) }) + ' · ' + t('force', { u: UN(), f: nf(fromT(ev.fmax), cfg.unitK ? 0 : 1) }) + '</p>';
     if (n) h += '<section><h2>' + t('found') + '</h2><ol class="issues">' + ev.issues.map(function (x, i) { return '<li><span class="no">' + (i + 1) + '</span><span>' + esc(issueText(x)) + '</span></li>'; }).join('') + '</ol></section>';
     if (ev.notes.length) h += '<section><h2>' + t('notes') + '</h2><ol class="issues notes">' + ev.notes.map(function (x) { return '<li><span>' + esc(issueText(x)) + '</span></li>'; }).join('') + '</ol></section>';
+    h += '<section><h2>' + t('sugT') + '</h2><div class="actions"><button class="btn" type="button" data-act="suggest">' + t('suggest') + '</button></div><div id="sugg">' + suggHtml() + '</div></section>';
     h += '<details id="dBox"' + (open.dBox ? ' open' : '') + '><summary>' + t('boxT') + '</summary><div class="din"><label class="chk" for="c-gShort"><input type="checkbox" id="c-gShort" data-cfgb="gShort"' + (cfg.gShort ? ' checked' : '') + '>' + t('cGShort') + '</label>' + unitSel('u-chk') + '<div class="inputs">' + [['boxCl', 'cCl'], ['boxTol', 'cTol'], ['maxHits', 'cHits']].map(function (c) { return '<label for="c-' + c[0] + '">' + t(c[1]) + '<input id="c-' + c[0] + '" type="number" inputmode="decimal" min="0" step="any" data-cfg="' + c[0] + '" value="' + cfg[c[0]] + '"></label>'; }).join('') + '</div></div></details>';
     el.innerHTML = h; document.getElementById('sim').innerHTML = simSvg();
   }
@@ -1254,9 +1321,10 @@ window.PB_LIBRARY = null; /* replaced by the shop's exported tool library: { v: 
     if (d.lang) { lang = d.lang; save('pb.lang', lang); render(); }
     else if (d.view) { view = d.view; msgs = []; render(); }
     else if (d.step) { si = +d.step; userStep = true; var ss = ev && ev.groups[part.gi].seq.steps[si]; prog = ss && !ss.ok && ss.prog != null ? ss.prog : 1; update(); }
-    else if (d.act === 'seqSet') { part.orders = part.orders || {}; part.orders[part.gi] = ev.groups[part.gi].seq.steps.map(function (s) { return s.k; }); userStep = true; update(); }
+    else if (d.act === 'seqSet') { part.orders = part.orders || {}; var cs = ev.groups[part.gi].seq; part.orders[part.gi] = cs.steps.map(function (s) { return s.k; }); if (cs.alts && cs.alts[0]) { part.sides = part.sides || {}; part.sides[part.gi] = Object.assign({}, cs.alts[0].sides); } userStep = true; update(); }
     else if (d.act === 'seqAuto') { part.orders[part.gi] = null; if (part.sides) part.sides[part.gi] = null; userStep = false; update(); }
     else if (d.mv) { var o = part.orders[part.gi], i0 = +d.mv, i1 = i0 + (+d.by); if (o && i1 >= 0 && i1 < o.length) { var tmp = o[i0]; o[i0] = o[i1]; o[i1] = tmp; si = i1; userStep = true; prog = 1; update(); } }
+    else if (d.alt) { var al = ev.groups[part.gi].seq.alts[+d.alt]; if (al) { part.orders = part.orders || {}; part.sides = part.sides || {}; part.orders[part.gi] = al.order.slice(); part.sides[part.gi] = Object.assign({}, al.sides); userStep = false; si = 0; update(); } }
     else if (d.act === 'suggest') runSuggest();
     else if (d.use && sugg) { var rw = sugg.rows[+d.use]; if (rw) { selM = rw.c.m ? rw.c.m.id : ''; selP = rw.c.pu.id; selD = rw.c.o.val; if (part.orders) part.orders = {}; userStep = false; si = 0; render(); } }
     else if (d.act === 'zoom') { fit = !fit; update(); }
